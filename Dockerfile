@@ -9,8 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml poetry.lock ./
+RUN pip install --no-cache-dir poetry && \
+    poetry config virtualenvs.create false && \
+    poetry install --only main --no-interaction --no-ansi
 
 # Stage 2: Runtime image
 FROM python:3.12-slim
@@ -28,7 +30,6 @@ ENV PATH="/opt/venv/bin:$PATH" \
 WORKDIR /app
 
 COPY app/ /app/app/
-COPY main.py /app/
 
 RUN mkdir -p /app/DATA && \
     useradd -u 1000 -m appuser && \
