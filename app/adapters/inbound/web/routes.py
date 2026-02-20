@@ -100,7 +100,7 @@ async def list_jobs():
             "language": job.language,
             "engine_name": job.engine_name,
             "original_filename": audio.original_filename if audio else "unknown",
-            "created_at": job.created_at.isoformat() + "Z",
+            "created_at": job.created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "error_message": job.error_message,
         })
     return result
