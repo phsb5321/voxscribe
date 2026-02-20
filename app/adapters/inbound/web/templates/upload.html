@@ -77,6 +77,25 @@
 }
 .job-links a:hover { background: #e2e8f0; }
 .formats { font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem; }
+.recent-jobs { margin-top: 1.5rem; }
+.recent-jobs h3 { font-size: 1rem; color: #334155; margin-bottom: 0.75rem; }
+.job-row {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.75rem 1rem; background: #f8fafc; border-radius: 8px; margin-bottom: 0.5rem;
+    text-decoration: none; color: inherit; transition: background 0.15s;
+}
+.job-row:hover { background: #e2e8f0; }
+.job-row .filename { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job-row .meta { font-size: 0.8rem; color: #64748b; }
+.badge {
+    display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px;
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+}
+.badge-pending { background: #fef3c7; color: #92400e; }
+.badge-converting, .badge-transcribing { background: #dbeafe; color: #1e40af; }
+.badge-completed { background: #d1fae5; color: #065f46; }
+.badge-failed { background: #fee2e2; color: #991b1b; }
+.empty-state { text-align: center; color: #94a3b8; padding: 1.5rem; font-size: 0.9rem; }
 {% endblock %}
 
 {% block content %}
@@ -111,6 +130,11 @@
     </form>
 
     <div id="error-container"></div>
+
+    <div class="recent-jobs" id="recent-jobs">
+        <h3>Recent Transcriptions</h3>
+        <div id="jobs-list"><div class="empty-state">Loading...</div></div>
+    </div>
 </div>
 {% endblock %}
 
@@ -293,6 +317,48 @@
 
         uploadNext(0);
     });
+
+    // Load recent jobs
+    function loadRecentJobs() {
+        fetch('/api/jobs')
+            .then(function(r) { return r.json(); })
+            .then(function(jobs) {
+                var container = document.getElementById('jobs-list');
+                if (!jobs.length) {
+                    container.innerHTML = '<div class="empty-state">No transcriptions yet. Upload an audio file to get started.</div>';
+                    return;
+                }
+                container.textContent = '';
+                jobs.forEach(function(job) {
+                    var a = document.createElement('a');
+                    a.href = '/jobs/' + job.job_id;
+                    a.className = 'job-row';
+
+                    var nameSpan = document.createElement('span');
+                    nameSpan.className = 'filename';
+                    nameSpan.textContent = job.original_filename;
+
+                    var badge = document.createElement('span');
+                    var status = job.status.toLowerCase();
+                    badge.className = 'badge badge-' + status;
+                    badge.textContent = job.status;
+
+                    var meta = document.createElement('span');
+                    meta.className = 'meta';
+                    var d = new Date(job.created_at);
+                    meta.textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+                    a.appendChild(nameSpan);
+                    a.appendChild(badge);
+                    a.appendChild(meta);
+                    container.appendChild(a);
+                });
+            })
+            .catch(function() {
+                document.getElementById('jobs-list').innerHTML = '<div class="empty-state">Could not load recent jobs.</div>';
+            });
+    }
+    loadRecentJobs();
 })();
 </script>
 {% endblock %}

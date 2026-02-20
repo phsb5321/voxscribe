@@ -86,6 +86,26 @@ async def upload_file(file: UploadFile, language: str = "pt-BR"):
     )
 
 
+@router.get("/api/jobs")
+async def list_jobs():
+    container = get_container()
+    jobs = container.repository.get_all_jobs(limit=50)
+    result = []
+    for job in jobs:
+        audio = container.repository.get_audio_file(job.audio_file_id)
+        result.append({
+            "job_id": str(job.id),
+            "status": job.status.value,
+            "progress_percent": job.progress_percent,
+            "language": job.language,
+            "engine_name": job.engine_name,
+            "original_filename": audio.original_filename if audio else "unknown",
+            "created_at": job.created_at.isoformat() + "Z",
+            "error_message": job.error_message,
+        })
+    return result
+
+
 @router.get("/api/jobs/{job_id}", response_model=JobStatusResponse)
 async def get_job_status(job_id: UUID):
     container = get_container()
