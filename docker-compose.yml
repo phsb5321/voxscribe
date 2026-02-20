@@ -1,0 +1,32 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./DATA:/app/DATA
+    environment:
+      - TRANSCRIPTION_ENGINE=faster-whisper
+      - REDIS_URL=redis://redis:6379
+      - DATA_DIR=/app/DATA
+      - DATABASE_URL=sqlite:///app/DATA/db.sqlite
+    depends_on:
+      - redis
+
+  worker:
+    build: .
+    command: rq worker --url redis://redis:6379
+    volumes:
+      - ./DATA:/app/DATA
+    environment:
+      - TRANSCRIPTION_ENGINE=faster-whisper
+      - REDIS_URL=redis://redis:6379
+      - DATA_DIR=/app/DATA
+      - DATABASE_URL=sqlite:///app/DATA/db.sqlite
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"

@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}Upload — Audio Transcriber{% endblock %}
+
+{% block extra_styles %}
+.drop-zone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 1.5rem;
+}
+.drop-zone:hover, .drop-zone.dragover {
+    border-color: #0f3460;
+    background: #f1f5f9;
+}
+.drop-zone p { color: #64748b; margin-top: 0.5rem; }
+.drop-zone .icon { font-size: 2.5rem; }
+.file-list {
+    margin-bottom: 1rem;
+}
+.file-item {
+    background: #f8fafc;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.file-item .name { flex: 1; font-weight: 500; }
+.file-item .size { color: #64748b; font-size: 0.875rem; }
+.file-item .remove { cursor: pointer; color: #991b1b; background: none; border: none; font-size: 1.2rem; }
+.language-select {
+    margin-bottom: 1.5rem;
+}
+.language-select label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+.language-select select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+.upload-progress {
+    display: none;
+    margin-top: 1rem;
+}
+.upload-progress.visible { display: block; }
+.progress-bar {
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+.progress-bar-fill {
+    height: 100%;
+    background: #0f3460;
+    width: 0%;
+    transition: width 0.3s;
+}
+.job-links { margin-top: 1rem; }
+.job-links a {
+    display: block;
+    padding: 0.5rem;
+    background: #f1f5f9;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    text-decoration: none;
+    color: #0f3460;
+}
+.job-links a:hover { background: #e2e8f0; }
+.formats { font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem; }
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <form id="upload-form" enctype="multipart/form-data">
+        <div class="drop-zone" id="drop-zone">
+            <div class="icon">&#127911;</div>
+            <p><strong>Drop audio files here</strong> or click to browse</p>
+            <p class="formats">MP3, WAV, FLAC, OGG &middot; Max 500 MB each &middot; Multiple files supported</p>
+            <input type="file" id="file-input" name="file" accept=".mp3,.wav,.flac,.ogg" multiple hidden>
+        </div>
+
+        <div class="file-list" id="file-list"></div>
+
+        <div class="language-select">
+            <label for="language">Language</label>
+            <select name="language" id="language">
+                <option value="pt-BR" selected>Portuguese (Brazil)</option>
+                <option value="en-US">English (US)</option>
+                <option value="es-ES">Spanish (Spain)</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submit-btn" disabled>Upload &amp; Transcribe</button>
+
+        <div class="upload-progress" id="upload-progress">
+            <div class="progress-bar"><div class="progress-bar-fill" id="progress-fill"></div></div>
+            <p style="text-align:center;margin-top:0.5rem;color:#64748b" id="progress-text">Uploading...</p>
+        </div>
+
+        <div class="job-links" id="job-links" style="display:none"></div>
+    </form>
+
+    <div id="error-container"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    var dropZone = document.getElementById('drop-zone');
+    var fileInput = document.getElementById('file-input');
+    var fileList = document.getElementById('file-list');
+    var submitBtn = document.getElementById('submit-btn');
+    var form = document.getElementById('upload-form');
+    var uploadProgress = document.getElementById('upload-progress');
+    var progressFill = document.getElementById('progress-fill');
+    var progressText = document.getElementById('progress-text');
+    var errorContainer = document.getElementById('error-container');
+    var jobLinks = document.getElementById('job-links');
+    var MAX_SIZE = 500 * 1024 * 1024;
+    var ALLOWED = ['.mp3', '.wav', '.flac', '.ogg'];
+    var selectedFiles = [];
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+        return (bytes/(1024*1024)).toFixed(1) + ' MB';
+    }
+
+    function showError(msg) {
+        errorContainer.textContent = '';
+        var div = document.createElement('div');
+        div.className = 'error-msg';
+        div.textContent = msg;
+        errorContainer.appendChild(div);
+    }
+
+    function clearError() {
+        errorContainer.textContent = '';
+    }
+
+    function renderFileList() {
+        fileList.textContent = '';
+        selectedFiles.forEach(function(file, idx) {
+            var item = document.createElement('div');
+            item.className = 'file-item';
+
+            var nameSpan = document.createElement('span');
+            nameSpan.className = 'name';
+            nameSpan.textContent = file.name;
+
+            var sizeSpan = document.createElement('span');
+            sizeSpan.className = 'size';
+            sizeSpan.textContent = formatSize(file.size);
+
+            var removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'remove';
+            removeBtn.textContent = '\u00D7';
+            removeBtn.setAttribute('data-index', idx);
+            removeBtn.addEventListener('click', function() {
+                selectedFiles.splice(parseInt(this.getAttribute('data-index')), 1);
+                renderFileList();
+            });
+
+            item.appendChild(nameSpan);
+            item.appendChild(sizeSpan);
+            item.appendChild(removeBtn);
+            fileList.appendChild(item);
+        });
+        submitBtn.disabled = selectedFiles.length === 0;
+    }
+
+    function addFiles(files) {
+        clearError();
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            var ext = '.' + file.name.split('.').pop().toLowerCase();
+            if (!ALLOWED.includes(ext)) {
+                showError('Unsupported format: ' + file.name + '. Accepted: MP3, WAV, FLAC, OGG');
+                continue;
+            }
+            if (file.size > MAX_SIZE) {
+                showError(file.name + ' exceeds 500 MB limit');
+                continue;
+            }
+            selectedFiles.push(file);
+        }
+        renderFileList();
+    }
+
+    dropZone.addEventListener('click', function() { fileInput.click(); });
+    fileInput.addEventListener('change', function() {
+        if (fileInput.files.length) addFiles(fileInput.files);
+        fileInput.value = '';
+    });
+
+    ['dragenter','dragover'].forEach(function(e) {
+        dropZone.addEventListener(e, function(ev) { ev.preventDefault(); dropZone.classList.add('dragover'); });
+    });
+    ['dragleave','drop'].forEach(function(e) {
+        dropZone.addEventListener(e, function(ev) { ev.preventDefault(); dropZone.classList.remove('dragover'); });
+    });
+    dropZone.addEventListener('drop', function(ev) {
+        if (ev.dataTransfer.files.length) addFiles(ev.dataTransfer.files);
+    });
+
+    form.addEventListener('submit', function(ev) {
+        ev.preventDefault();
+        clearError();
+        if (selectedFiles.length === 0) return;
+
+        var language = document.getElementById('language').value;
+        submitBtn.disabled = true;
+        uploadProgress.classList.add('visible');
+
+        var completed = 0;
+        var total = selectedFiles.length;
+        var redirectUrls = [];
+
+        function uploadNext(index) {
+            if (index >= total) {
+                progressText.textContent = 'All files uploaded!';
+                if (redirectUrls.length === 1) {
+                    window.location.href = redirectUrls[0];
+                } else {
+                    jobLinks.style.display = 'block';
+                    jobLinks.textContent = '';
+                    var heading = document.createElement('p');
+                    heading.style.fontWeight = '500';
+                    heading.style.marginBottom = '0.5rem';
+                    heading.textContent = 'Jobs created (' + redirectUrls.length + '):';
+                    jobLinks.appendChild(heading);
+                    redirectUrls.forEach(function(url, i) {
+                        var a = document.createElement('a');
+                        a.href = url;
+                        a.textContent = 'Job ' + (i + 1) + ' — ' + selectedFiles[i].name;
+                        jobLinks.appendChild(a);
+                    });
+                }
+                return;
+            }
+
+            var data = new FormData();
+            data.append('file', selectedFiles[index]);
+            data.append('language', language);
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/upload');
+
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    var filePct = (e.loaded / e.total);
+                    var overallPct = Math.round(((completed + filePct) / total) * 100);
+                    progressFill.style.width = overallPct + '%';
+                    progressText.textContent = 'Uploading file ' + (index + 1) + '/' + total + '... ' + overallPct + '%';
+                }
+            });
+
+            xhr.onload = function() {
+                if (xhr.status === 201) {
+                    var resp = JSON.parse(xhr.responseText);
+                    redirectUrls.push(resp.redirect_url);
+                    completed++;
+                    uploadNext(index + 1);
+                } else {
+                    var msg = 'Upload failed for ' + selectedFiles[index].name;
+                    try { msg = JSON.parse(xhr.responseText).detail || msg; } catch(e) {}
+                    showError(msg);
+                    submitBtn.disabled = false;
+                    uploadProgress.classList.remove('visible');
+                }
+            };
+
+            xhr.onerror = function() {
+                showError('Network error uploading ' + selectedFiles[index].name);
+                submitBtn.disabled = false;
+                uploadProgress.classList.remove('visible');
+            };
+
+            xhr.send(data);
+        }
+
+        uploadNext(0);
+    });
+})();
+</script>
+{% endblock %}

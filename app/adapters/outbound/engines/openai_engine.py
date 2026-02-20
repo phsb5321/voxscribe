@@ -1,0 +1,56 @@
+"""OpenAI gpt-4o-mini-transcribe transcription engine adapter."""
+
+import logging
+import os
+
+from app.domain.exceptions import TranscriptionError
+from app.ports.transcription_engine import TranscriptionEnginePort
+
+logger = logging.getLogger(__name__)
+
+
+class OpenAIEngine(TranscriptionEnginePort):
+    def __init__(self, api_key: str = "") -> None:
+        self._api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
+        self._client = None
+
+    def _get_client(self):
+        if self._client is None:
+            try:
+                from openai import OpenAI
+
+                self._client = OpenAI(api_key=self._api_key)
+            except Exception as exc:
+                raise TranscriptionError(
+                    f"Failed to initialize OpenAI client: {exc}"
+                ) from exc
+        return self._client
+
+    def transcribe(self, audio_path: str, language: str) -> str:
+        """Transcribe audio using OpenAI gpt-4o-mini-transcribe."""
+        try:
+            client = self._get_client()
+
+            with open(audio_path, "rb") as audio_file:
+                response = client.audio.transcriptions.create(
+                    model="gpt-4o-mini-transcribe",
+                    file=audio_file,
+                    language=language.split("-")[0],  # OpenAI uses ISO 639-1 (e.g., "pt")
+                )
+
+            text = response.text.strip()
+            logger.info(
+                f"OpenAI transcription completed: {len(text)} chars from {audio_path}"
+            )
+            return text
+
+        except TranscriptionError:
+            raise
+        except Exception as exc:
+            raise TranscriptionError(
+                f"OpenAI transcription failed for {audio_path}: {exc}"
+            ) from exc
+
+    @property
+    def engine_name(self) -> str:
+        return "openai"
