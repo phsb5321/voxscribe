@@ -19,5 +19,6 @@ class RQJobQueue(JobQueuePort):
         self._queue.enqueue(
             "app.adapters.inbound.worker.process_job",
             str(job_id),
+            job_timeout=1800,  # 30 minutes for model download + transcription
         )
         logger.info(f"Enqueued job {job_id} for processing")
