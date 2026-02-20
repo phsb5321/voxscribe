@@ -18,7 +18,8 @@ class Settings:
     )
     database_url: str = field(
         default_factory=lambda: os.environ.get(
-            "DATABASE_URL", "sqlite:///./DATA/db.sqlite"
+            "DATABASE_URL",
+            f"sqlite:///{os.path.join(os.environ.get('DATA_DIR', './DATA'), 'db.sqlite')}",
         )
     )
     default_language: str = field(
