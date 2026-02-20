@@ -35,3 +35,7 @@ class JobRepositoryPort(ABC):
     @abstractmethod
     def get_audio_file(self, audio_file_id: UUID) -> AudioFile | None:
         """Get an audio file by ID, or None if not found."""
+
+    @abstractmethod
+    def get_all_jobs(self, limit: int = 50) -> list[TranscriptionJob]:
+        """Get all jobs, ordered by most recent first."""

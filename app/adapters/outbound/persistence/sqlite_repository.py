@@ -168,6 +168,12 @@ class SQLiteJobRepository(JobRepositoryPort):
             return None
         return self._row_to_audio_file(row)
 
+    def get_all_jobs(self, limit: int = 50) -> list[TranscriptionJob]:
+        """Get all jobs, ordered by most recent first."""
+        sql = "SELECT * FROM transcription_jobs ORDER BY created_at DESC LIMIT ?"
+        rows = self._conn.execute(sql, (limit,)).fetchall()
+        return [self._row_to_job(row) for row in rows]
+
     # ------------------------------------------------------------------
     # Row-to-domain mappers
     # ------------------------------------------------------------------
