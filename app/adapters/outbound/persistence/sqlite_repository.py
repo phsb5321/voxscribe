@@ -96,9 +96,9 @@ class SQLiteJobRepository(JobRepositoryPort):
             ))
 
     def create_audio_file(self, audio_file: AudioFile) -> None:
-        """Persist a new audio file record."""
+        """Persist or update an audio file record."""
         sql = """
-            INSERT INTO audio_files
+            INSERT OR REPLACE INTO audio_files
                 (id, original_filename, format, size_bytes, duration_seconds,
                  storage_path, upload_timestamp, converted_path)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
