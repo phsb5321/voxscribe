@@ -3,6 +3,8 @@
 import logging
 from uuid import UUID
 
+from app.domain.value_objects.job_status import JobStatus
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,4 +18,10 @@ def process_job(job_id_str: str) -> None:
     container = bootstrap()
     container.process_transcription.execute(job_id)
 
-    logger.info(f"Worker completed job {job_id}")
+    # Check if the job needs a retry (was reset to PENDING after failure)
+    job = container.process_transcription._repository.get_job(job_id)
+    if job and job.status == JobStatus.PENDING and job.retry_count > 0:
+        logger.info(f"Job {job_id}: Re-enqueuing for retry {job.retry_count}/3")
+        container.queue.enqueue(job_id)
+    else:
+        logger.info(f"Worker completed job {job_id}")
