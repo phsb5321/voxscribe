@@ -33,7 +33,24 @@ class FasterWhisperEngine(TranscriptionEnginePort):
                 self._load_model()
 
             lang = self._normalize_language(language)
-            segments, _ = self._model.transcribe(audio_path, language=lang)
+            initial_prompt = None
+            if lang == "pt":
+                initial_prompt = "Transcrição em português brasileiro."
+
+            segments, _ = self._model.transcribe(
+                audio_path,
+                language=lang,
+                beam_size=5,
+                vad_filter=True,
+                vad_parameters=dict(
+                    min_silence_duration_ms=500,
+                    speech_pad_ms=400,
+                ),
+                word_timestamps=True,
+                condition_on_previous_text=True,
+                hallucination_silence_threshold=2.0,
+                initial_prompt=initial_prompt,
+            )
             text = " ".join(segment.text.strip() for segment in segments)
             return text
         except TranscriptionError:

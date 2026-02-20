@@ -31,6 +31,14 @@ class Settings:
             "FASTER_WHISPER_MODEL", "large-v3-turbo"
         )
     )
+    groq_api_key: str = field(
+        default_factory=lambda: os.environ.get("GROQ_API_KEY", "")
+    )
+    groq_model: str = field(
+        default_factory=lambda: os.environ.get(
+            "GROQ_MODEL", "whisper-large-v3"
+        )
+    )
 
     @property
     def sqlite_path(self) -> str:
