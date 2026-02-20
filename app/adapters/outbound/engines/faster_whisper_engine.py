@@ -22,12 +22,18 @@ class FasterWhisperEngine(TranscriptionEnginePort):
         )
         logger.info("Model loaded successfully")
 
+    @staticmethod
+    def _normalize_language(language: str) -> str:
+        """Strip region subtag (e.g. pt-BR → pt) for faster-whisper."""
+        return language.split("-")[0].lower()
+
     def transcribe(self, audio_path: str, language: str) -> str:
         try:
             if self._model is None:
                 self._load_model()
 
-            segments, _ = self._model.transcribe(audio_path, language=language)
+            lang = self._normalize_language(language)
+            segments, _ = self._model.transcribe(audio_path, language=lang)
             text = " ".join(segment.text.strip() for segment in segments)
             return text
         except TranscriptionError:
