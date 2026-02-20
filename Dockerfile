@@ -17,11 +17,8 @@ RUN pip install --no-cache-dir poetry && \
 
 COPY app/ /app/app/
 
-RUN mkdir -p /app/DATA && \
-    useradd -u 1000 -m appuser && \
-    chown -R appuser:appuser /app
-
-USER appuser
+RUN mkdir -p /app/DATA/uploads && \
+    chmod -R 777 /app/DATA
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONIOENCODING=utf8
