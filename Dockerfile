@@ -12,7 +12,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY pyproject.toml poetry.lock ./
 RUN pip install --no-cache-dir poetry && \
     poetry config virtualenvs.create false && \
-    poetry install --only main --no-interaction --no-ansi
+    poetry install --only main --no-root --no-interaction --no-ansi
 
 # Stage 2: Runtime image
 FROM python:3.12-slim
