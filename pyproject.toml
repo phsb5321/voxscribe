@@ -1,21 +1,37 @@
 [tool.poetry]
 name = "audio"
-version = "0.1.0"
-description = ""
+version = "0.2.0"
+description = "Audio transcription tool with web UI and hexagonal architecture"
 authors = ["Pedro Balbino <phsb5321@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-pydub = {version = "0.25.1", markers = "python_version >= \"3.12\" and python_version < \"4.0\""}
-speechrecognition = {version = "3.10.4", markers = "python_version >= \"3.12\" and python_version < \"4.0\""}
-certifi = {version = "2024.7.4", markers = "python_version >= \"3.12\" and python_version < \"4.0\""}
-charset-normalizer = {version = "3.3.2", markers = "python_version >= \"3.12\" and python_version < \"4.0\""}
-idna = {version = "3.7", markers = "python_version >= \"3.12\" and python_version < \"4.0\""}
-requests = {version = "2.32.3", markers = "python_version >= \"3.12\" and python_version < \"4.0\""}
-typing-extensions = {version = "4.12.2", markers = "python_version >= \"3.12\" and python_version < \"4.0\""}
-urllib3 = {version = "2.2.2", markers = "python_version >= \"3.12\" and python_version < \"4.0\""}
+# Web framework
+fastapi = ">=0.115.0"
+uvicorn = {version = ">=0.34.0", extras = ["standard"]}
+jinja2 = ">=3.1.0"
+python-multipart = ">=0.0.18"
+# Transcription engines
+faster-whisper = ">=1.1.0"
+openai = ">=1.60.0"
+# Audio processing
+pydub = ">=0.25.1"
+audioop-lts = {version = ">=0.2.1", python = ">=3.13"}
+# Background jobs
+rq = ">=2.1.0"
+redis = ">=5.0.0"
+# Existing deps (kept for backward compat)
+dnspython = ">=2.7.0"
 
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0.0"
+httpx = ">=0.28.0"
+pytest-asyncio = ">=0.25.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
 
 [build-system]
 requires = ["poetry-core"]

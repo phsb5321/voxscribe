@@ -17,5 +17,8 @@ if [[ ! -d $(pwd) ]]; then
   exit 1
 fi
 
-# Run the container
-docker run -v $(pwd):/app $IMAGE_NAME
+# Run the web server
+docker run -p 5000:5000 -v "$(pwd)/DATA:/app/DATA" \
+  -e TRANSCRIPTION_ENGINE="${TRANSCRIPTION_ENGINE:-faster-whisper}" \
+  -e REDIS_URL="${REDIS_URL:-redis://localhost:6379}" \
+  $IMAGE_NAME

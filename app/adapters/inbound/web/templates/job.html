@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Job {{ job.job_id | string | truncate(8, True, '') }} — Audio Transcriber{% endblock %}
+
+{% block extra_styles %}
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.status-PENDING { background: #fef3c7; color: #92400e; }
+.status-CONVERTING { background: #dbeafe; color: #1e40af; }
+.status-TRANSCRIBING { background: #e0e7ff; color: #3730a3; }
+.status-COMPLETED { background: #dcfce7; color: #166534; }
+.status-FAILED { background: #fee2e2; color: #991b1b; }
+
+.progress-section { margin: 1.5rem 0; }
+.progress-bar {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.progress-bar-fill {
+    height: 100%;
+    background: #0f3460;
+    transition: width 0.5s ease;
+}
+.progress-label {
+    text-align: center;
+    margin-top: 0.5rem;
+    color: #64748b;
+    font-size: 0.875rem;
+}
+.meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+    font-size: 0.9rem;
+}
+.meta-grid dt { color: #64748b; }
+.meta-grid dd { font-weight: 500; }
+
+.result-section { margin-top: 2rem; }
+.result-text {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    white-space: pre-wrap;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    max-height: 500px;
+    overflow-y: auto;
+}
+.result-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+.error-detail {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+{% endblock %}
+
+{% block content %}
+<div class="card" id="job-card"
+     {% if job.status not in ('COMPLETED', 'FAILED') %}
+     hx-ext="sse"
+     sse-connect="/api/jobs/{{ job.job_id }}/progress"
+     sse-swap="status"
+     hx-swap="innerHTML"
+     hx-target="#sse-target"
+     {% endif %}>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <h2 style="font-size:1.2rem;">{{ job.audio_file.original_filename if job.audio_file else 'Processing...' }}</h2>
+        <span class="status-badge status-{{ job.status }}" id="status-badge">{{ job.status }}</span>
+    </div>
+
+    <div id="sse-target">
+        {% include "partials/job_progress.html" ignore missing %}
+    </div>
+
+    <div class="progress-section" id="progress-section">
+        <div class="progress-bar">
+            <div class="progress-bar-fill" id="progress-fill" style="width: {{ job.progress_percent }}%"></div>
+        </div>
+        <div class="progress-label" id="progress-label">{{ job.progress_percent }}%</div>
+    </div>
+
+    <dl class="meta-grid">
+        <dt>Language</dt>
+        <dd>{{ job.language }}</dd>
+        <dt>Engine</dt>
+        <dd>{{ job.engine_name or '—' }}</dd>
+        {% if job.audio_file %}
+        <dt>Format</dt>
+        <dd>{{ job.audio_file.format }}</dd>
+        <dt>Size</dt>
+        <dd>{{ "%.1f"|format(job.audio_file.size_bytes / 1048576) }} MB</dd>
+        {% if job.audio_file.duration_seconds %}
+        <dt>Duration</dt>
+        <dd>{{ "%.0f"|format(job.audio_file.duration_seconds) }}s</dd>
+        {% endif %}
+        {% endif %}
+    </dl>
+
+    {% if job.status == 'FAILED' and job.error_message %}
+    <div class="error-detail">
+        <strong>Error:</strong> {{ job.error_message }}
+    </div>
+    {% endif %}
+
+    {% if result %}
+    <div class="result-section">
+        <h3 style="margin-bottom:0.75rem;">Transcription</h3>
+        <div class="result-text" id="result-text">{{ result.full_text }}</div>
+        <div class="result-actions">
+            <button class="btn btn-primary" onclick="copyText()">Copy to Clipboard</button>
+            <a class="btn btn-secondary" href="/api/jobs/{{ job.job_id }}/result/download">Download TXT</a>
+        </div>
+        <p style="margin-top:0.75rem;font-size:0.8rem;color:#94a3b8;">
+            Processed in {{ "%.1f"|format(result.processing_duration_seconds) }}s
+            using {{ result.engine_name }}
+        </p>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:2rem;text-align:center;">
+        <a href="/" class="btn btn-secondary">Upload Another File</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function copyText() {
+    const text = document.getElementById('result-text').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = orig; }, 2000);
+    });
+}
+
+document.body.addEventListener('sse:status', function(evt) {
+    try {
+        const data = JSON.parse(evt.detail.data);
+        const badge = document.getElementById('status-badge');
+        const fill = document.getElementById('progress-fill');
+        const label = document.getElementById('progress-label');
+
+        if (badge) {
+            badge.textContent = data.status;
+            badge.className = 'status-badge status-' + data.status;
+        }
+        if (fill) fill.style.width = data.progress_percent + '%';
+        if (label) label.textContent = data.progress_percent + '%';
+
+        if (data.status === 'COMPLETED' || data.status === 'FAILED') {
+            setTimeout(() => location.reload(), 500);
+        }
+    } catch(e) {}
+});
+</script>
+{% endblock %}
