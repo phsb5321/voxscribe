@@ -36,8 +36,8 @@ def _make_wav_bytes(duration_seconds: float = 1.0, sample_rate: int = 16000) -> 
         b"WAVE",
         b"fmt ",
         16,
-        1,   # PCM
-        1,   # mono
+        1,  # PCM
+        1,  # mono
         sample_rate,
         sample_rate * 2,
         2,
@@ -184,7 +184,7 @@ class TestUploadPage:
         response = await client.get("/")
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
-        assert "Audio Transcriber" in response.text
+        assert "Voxscribe" in response.text
 
 
 class TestJobPage:

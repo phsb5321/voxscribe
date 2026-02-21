@@ -305,6 +305,34 @@
 }
 .empty-state a:hover { text-decoration: underline; }
 
+/* ── Cleanup Button ── */
+.btn-cleanup {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+    background: var(--red-bg);
+    color: var(--red-text);
+    border: 1.5px solid transparent;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: background var(--transition), border-color var(--transition);
+    white-space: nowrap;
+}
+.btn-cleanup:hover {
+    background: #fecaca;
+    border-color: var(--red-text);
+}
+.btn-cleanup:active {
+    transform: scale(0.97);
+}
+.btn-cleanup:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* ── Responsive ── */
 @media (max-width: 600px) {
     .form-row { flex-direction: column; }
@@ -362,11 +390,19 @@
 <div class="card history-section" id="history-section">
     <div class="history-header">
         <span class="history-title">Transcription History</span>
-        <div class="search-box">
-            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input type="text" id="search-input" placeholder="Search by filename...">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+            <div class="search-box">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" id="search-input" placeholder="Search by filename...">
+            </div>
+            <button type="button" class="btn btn-cleanup" id="cleanup-btn" title="Delete all transcriptions" style="display:none;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+                Clear All
+            </button>
         </div>
     </div>
     <div class="filter-tabs" id="filter-tabs">
@@ -400,6 +436,7 @@
     var selectedFiles = [];
     var allJobs = [];
     var currentFilter = 'all';
+    var cleanupBtn = document.getElementById('cleanup-btn');
 
     function formatSize(bytes) {
         if (bytes == null || bytes === 0) return '—';
@@ -696,6 +733,28 @@
     // Search input
     searchInput.addEventListener('input', function() { filterJobs(); });
 
+    // Cleanup button
+    cleanupBtn.addEventListener('click', function() {
+        if (!confirm('Delete ALL transcriptions? This cannot be undone.')) return;
+        cleanupBtn.disabled = true;
+        cleanupBtn.textContent = 'Deleting...';
+        fetch('/api/jobs', { method: 'DELETE' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                allJobs = [];
+                updateCounts();
+                filterJobs();
+                cleanupBtn.style.display = 'none';
+                cleanupBtn.disabled = false;
+                cleanupBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg> Clear All';
+            })
+            .catch(function() {
+                alert('Failed to delete transcriptions. Please try again.');
+                cleanupBtn.disabled = false;
+                cleanupBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg> Clear All';
+            });
+    });
+
     // Load jobs
     function loadJobs() {
         fetch('/api/jobs')
@@ -704,6 +763,7 @@
                 allJobs = jobs;
                 updateCounts();
                 filterJobs();
+                cleanupBtn.style.display = allJobs.length > 0 ? '' : 'none';
             })
             .catch(function() {
                 document.getElementById('jobs-list').innerHTML = '<div class="empty-state">Could not load transcription history.</div>';

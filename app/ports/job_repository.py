@@ -39,3 +39,7 @@ class JobRepositoryPort(ABC):
     @abstractmethod
     def get_all_jobs(self, limit: int = 50) -> list[TranscriptionJob]:
         """Get all jobs, ordered by most recent first."""
+
+    @abstractmethod
+    def delete_all_jobs(self) -> int:
+        """Delete all jobs, results, and audio file records. Return count of deleted jobs."""

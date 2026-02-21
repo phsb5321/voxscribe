@@ -82,18 +82,21 @@ class SQLiteJobRepository(JobRepositoryPort):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         with self._conn:
-            self._conn.execute(sql, (
-                str(job.id),
-                str(job.audio_file_id),
-                job.status.value,
-                job.progress_percent,
-                job.language,
-                job.engine_name or None,
-                job.created_at.isoformat(),
-                job.updated_at.isoformat(),
-                job.error_message,
-                job.retry_count,
-            ))
+            self._conn.execute(
+                sql,
+                (
+                    str(job.id),
+                    str(job.audio_file_id),
+                    job.status.value,
+                    job.progress_percent,
+                    job.language,
+                    job.engine_name or None,
+                    job.created_at.isoformat(),
+                    job.updated_at.isoformat(),
+                    job.error_message,
+                    job.retry_count,
+                ),
+            )
 
     def create_audio_file(self, audio_file: AudioFile) -> None:
         """Persist or update an audio file record."""
@@ -104,16 +107,30 @@ class SQLiteJobRepository(JobRepositoryPort):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """
         with self._conn:
-            self._conn.execute(sql, (
-                str(audio_file.id),
-                audio_file.original_filename,
-                audio_file.format.value,
-                audio_file.size_bytes,
-                audio_file.duration_seconds,
-                audio_file.storage_path,
-                audio_file.upload_timestamp.isoformat(),
-                audio_file.converted_path,
-            ))
+            self._conn.execute(
+                sql,
+                (
+                    str(audio_file.id),
+                    audio_file.original_filename,
+                    audio_file.format.value,
+                    audio_file.size_bytes,
+                    audio_file.duration_seconds,
+                    audio_file.storage_path,
+                    audio_file.upload_timestamp.isoformat(),
+                    audio_file.converted_path,
+                ),
+            )
+
+    def delete_all_jobs(self) -> int:
+        """Delete all jobs, results, and audio file records. Return count of deleted jobs."""
+        with self._conn:
+            count = self._conn.execute(
+                "SELECT COUNT(*) FROM transcription_jobs"
+            ).fetchone()[0]
+            self._conn.execute("DELETE FROM transcription_results")
+            self._conn.execute("DELETE FROM transcription_jobs")
+            self._conn.execute("DELETE FROM audio_files")
+        return count
 
     def save_result(self, result: TranscriptionResult) -> None:
         """Save a transcription result."""
@@ -124,15 +141,18 @@ class SQLiteJobRepository(JobRepositoryPort):
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """
         with self._conn:
-            self._conn.execute(sql, (
-                str(result.id),
-                str(result.job_id),
-                result.full_text,
-                result.language,
-                result.engine_name,
-                result.processing_duration_seconds,
-                result.created_at.isoformat(),
-            ))
+            self._conn.execute(
+                sql,
+                (
+                    str(result.id),
+                    str(result.job_id),
+                    result.full_text,
+                    result.language,
+                    result.engine_name,
+                    result.processing_duration_seconds,
+                    result.created_at.isoformat(),
+                ),
+            )
 
     # ------------------------------------------------------------------
     # Read operations

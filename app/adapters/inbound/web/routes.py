@@ -93,20 +93,46 @@ async def list_jobs():
     result = []
     for job in jobs:
         audio = container.repository.get_audio_file(job.audio_file_id)
-        result.append({
-            "job_id": str(job.id),
-            "status": job.status.value,
-            "progress_percent": job.progress_percent,
-            "language": job.language,
-            "engine_name": job.engine_name,
-            "original_filename": audio.original_filename if audio else "unknown",
-            "created_at": job.created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "error_message": job.error_message,
-            "size_bytes": audio.size_bytes if audio else 0,
-            "duration_seconds": audio.duration_seconds if audio else None,
-            "format": audio.format.value if audio else None,
-        })
+        result.append(
+            {
+                "job_id": str(job.id),
+                "status": job.status.value,
+                "progress_percent": job.progress_percent,
+                "language": job.language,
+                "engine_name": job.engine_name,
+                "original_filename": audio.original_filename if audio else "unknown",
+                "created_at": job.created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "error_message": job.error_message,
+                "size_bytes": audio.size_bytes if audio else 0,
+                "duration_seconds": audio.duration_seconds if audio else None,
+                "format": audio.format.value if audio else None,
+            }
+        )
     return result
+
+
+@router.delete("/api/jobs")
+async def delete_all_jobs():
+    """Delete all transcription jobs, results, and associated audio files."""
+    container = get_container()
+
+    jobs = container.repository.get_all_jobs(limit=1000)
+    for job in jobs:
+        audio = container.repository.get_audio_file(job.audio_file_id)
+        if audio:
+            try:
+                container.storage.delete(audio.storage_path)
+            except Exception:
+                pass
+            if audio.converted_path:
+                try:
+                    container.storage.delete(audio.converted_path)
+                except Exception:
+                    pass
+
+    count = container.repository.delete_all_jobs()
+    logger.info(f"Deleted {count} transcription jobs and associated files")
+    return {"deleted": count}
 
 
 @router.get("/api/jobs/{job_id}", response_model=JobStatusResponse)
@@ -188,7 +214,7 @@ async def job_progress_sse(job_id: UUID):
         while True:
             job = container.get_job_status.execute(job_id)
             if job is None:
-                yield f"event: error\ndata: {{\"error\": \"Job not found\"}}\n\n"
+                yield f'event: error\ndata: {{"error": "Job not found"}}\n\n'
                 return
 
             if job.status != last_status or job.progress_percent != last_progress:
