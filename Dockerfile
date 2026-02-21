@@ -15,6 +15,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 COPY app/ /app/app/
+RUN uv sync --frozen --no-dev --no-editable
 
 RUN mkdir -p /app/DATA/uploads && \
     chmod -R 777 /app/DATA

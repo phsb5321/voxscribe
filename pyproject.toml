@@ -3,7 +3,6 @@ name = "audio"
 version = "0.2.0"
 description = "Audio transcription tool with web UI and hexagonal architecture"
 authors = [{ name = "Pedro Balbino", email = "phsb5321@gmail.com" }]
-readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     # Web framework
