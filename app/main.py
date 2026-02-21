@@ -24,6 +24,10 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Mount static files
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
     # Import and include routes
     from app.adapters.inbound.web.routes import router
 

@@ -3,89 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Audio Transcriber{% endblock %}</title>
+    <title>{% block title %}Voxscribe{% endblock %}</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --navy-900: #0c1b33;
+            --navy-800: #0f3460;
+            --navy-700: #16213e;
+            --navy-600: #1a2744;
+            --slate-700: #334155;
+            --slate-500: #64748b;
+            --slate-400: #94a3b8;
+            --slate-200: #e2e8f0;
+            --slate-100: #f1f5f9;
+            --slate-50: #f8fafc;
+            --white: #ffffff;
+            --bg: #f0f2f5;
+            --teal-400: #4fd1c5;
+            --teal-500: #38b2ac;
+            --green-bg: #dcfce7;
+            --green-text: #166534;
+            --blue-bg: #dbeafe;
+            --blue-text: #1e40af;
+            --indigo-bg: #e0e7ff;
+            --indigo-text: #3730a3;
+            --amber-bg: #fef3c7;
+            --amber-text: #92400e;
+            --red-bg: #fee2e2;
+            --red-text: #991b1b;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.1);
+            --transition: 0.2s ease;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             line-height: 1.6;
-            color: #1a1a2e;
-            background: #f0f2f5;
+            color: var(--navy-900);
+            background: var(--bg);
             min-height: 100vh;
         }
+
         .container {
-            max-width: 800px;
+            max-width: 860px;
             margin: 0 auto;
-            padding: 2rem 1rem;
+            padding: 0 1.25rem 2rem;
         }
+
         header {
+            padding: 1.5rem 0 1.25rem;
             text-align: center;
-            margin-bottom: 2rem;
         }
-        header h1 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #16213e;
+
+        .logo-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            text-decoration: none;
+            color: inherit;
         }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--navy-800);
+            letter-spacing: -0.02em;
+        }
+
+        .logo-text span {
+            color: var(--teal-500);
+        }
+
         header p {
-            color: #666;
-            margin-top: 0.25rem;
+            color: var(--slate-500);
+            margin-top: 0.2rem;
+            font-size: 0.9rem;
         }
+
         .card {
-            background: #fff;
-            border-radius: 12px;
+            background: var(--white);
+            border-radius: var(--radius-lg);
             padding: 2rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: var(--shadow-md);
         }
+
         .btn {
-            display: inline-block;
-            padding: 0.75rem 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.65rem 1.4rem;
             border: none;
-            border-radius: 8px;
-            font-size: 1rem;
+            border-radius: var(--radius-md);
+            font-size: 0.925rem;
             font-weight: 600;
             cursor: pointer;
             text-decoration: none;
-            transition: background 0.2s;
+            transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+            line-height: 1.4;
         }
+
+        .btn:active { transform: scale(0.97); }
+
         .btn-primary {
-            background: #0f3460;
-            color: #fff;
+            background: var(--navy-800);
+            color: var(--white);
         }
-        .btn-primary:hover { background: #16213e; }
+        .btn-primary:hover { background: var(--navy-700); box-shadow: var(--shadow-sm); }
+
         .btn-secondary {
-            background: #e2e8f0;
-            color: #1a1a2e;
+            background: var(--slate-200);
+            color: var(--navy-900);
         }
         .btn-secondary:hover { background: #cbd5e1; }
+
         .error-msg {
-            background: #fee2e2;
-            color: #991b1b;
-            padding: 1rem;
-            border-radius: 8px;
+            background: var(--red-bg);
+            color: var(--red-text);
+            padding: 0.875rem 1rem;
+            border-radius: var(--radius-md);
             margin-bottom: 1rem;
+            font-size: 0.9rem;
         }
+
         .success-msg {
-            background: #dcfce7;
-            color: #166534;
-            padding: 1rem;
-            border-radius: 8px;
+            background: var(--green-bg);
+            color: var(--green-text);
+            padding: 0.875rem 1rem;
+            border-radius: var(--radius-md);
             margin-bottom: 1rem;
+            font-size: 0.9rem;
         }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.55rem;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .badge-pending { background: var(--amber-bg); color: var(--amber-text); }
+        .badge-converting, .badge-transcribing { background: var(--blue-bg); color: var(--blue-text); }
+        .badge-completed { background: var(--green-bg); color: var(--green-text); }
+        .badge-failed { background: var(--red-bg); color: var(--red-text); }
+
         @media (max-width: 600px) {
-            .container { padding: 1rem 0.75rem; }
+            .container { padding: 0 0.75rem 1.5rem; }
             .card { padding: 1.25rem; }
+            header { padding: 1rem 0 1rem; }
+            .logo-icon { width: 30px; height: 30px; }
+            .logo-text { font-size: 1.3rem; }
         }
+
         {% block extra_styles %}{% endblock %}
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Audio Transcriber</h1>
-            <p>Upload audio files for Brazilian Portuguese transcription</p>
+            <a href="/" class="logo-link">
+                <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="36" height="36" rx="8" fill="var(--navy-800)"/>
+                    <g stroke="#fff" stroke-width="2.2" stroke-linecap="round">
+                        <line x1="8" y1="22" x2="8" y2="14"/>
+                        <line x1="13" y1="25" x2="13" y2="11"/>
+                        <line x1="18" y1="27" x2="18" y2="9"/>
+                        <line x1="23" y1="25" x2="23" y2="11"/>
+                        <line x1="28" y1="22" x2="28" y2="14"/>
+                    </g>
+                    <circle cx="30" cy="7" r="3.5" fill="var(--teal-400)" opacity="0.9"/>
+                </svg>
+                <span class="logo-text">Vox<span>scribe</span></span>
+            </a>
+            <p>Audio transcription powered by AI</p>
         </header>
         <main>
             {% block content %}{% endblock %}

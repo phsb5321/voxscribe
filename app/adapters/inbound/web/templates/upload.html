@@ -1,139 +1,382 @@
 {% extends "base.html" %}
 
-{% block title %}Upload — Audio Transcriber{% endblock %}
+{% block title %}Upload — Voxscribe{% endblock %}
 
 {% block extra_styles %}
-.drop-zone {
-    border: 2px dashed #cbd5e1;
-    border-radius: 12px;
-    padding: 3rem 2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
+/* ── Upload Section ── */
+.upload-card {
     margin-bottom: 1.5rem;
 }
-.drop-zone:hover, .drop-zone.dragover {
-    border-color: #0f3460;
-    background: #f1f5f9;
+
+.drop-zone {
+    border: 2px dashed var(--slate-200);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color var(--transition), background var(--transition), transform var(--transition);
+    margin-bottom: 1.25rem;
+    position: relative;
 }
-.drop-zone p { color: #64748b; margin-top: 0.5rem; }
-.drop-zone .icon { font-size: 2.5rem; }
-.file-list {
-    margin-bottom: 1rem;
+.drop-zone:hover {
+    border-color: var(--navy-800);
+    background: var(--slate-100);
 }
+.drop-zone.dragover {
+    border-color: var(--teal-500);
+    background: rgba(79,209,197,0.06);
+    transform: scale(1.01);
+}
+.drop-zone-icon {
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 0.75rem;
+    color: var(--slate-400);
+    transition: color var(--transition);
+}
+.drop-zone:hover .drop-zone-icon,
+.drop-zone.dragover .drop-zone-icon {
+    color: var(--navy-800);
+}
+.drop-zone-title {
+    font-weight: 600;
+    color: var(--navy-700);
+    font-size: 1rem;
+}
+.drop-zone-sub {
+    color: var(--slate-500);
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+.drop-zone-formats {
+    font-size: 0.78rem;
+    color: var(--slate-400);
+    margin-top: 0.5rem;
+}
+
+/* ── File List ── */
+.file-list { margin-bottom: 1rem; }
 .file-item {
-    background: #f8fafc;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    margin-bottom: 0.5rem;
+    background: var(--slate-50);
+    padding: 0.6rem 0.85rem;
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.4rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    font-size: 0.9rem;
 }
-.file-item .name { flex: 1; font-weight: 500; }
-.file-item .size { color: #64748b; font-size: 0.875rem; }
-.file-item .remove { cursor: pointer; color: #991b1b; background: none; border: none; font-size: 1.2rem; }
-.language-select {
-    margin-bottom: 1.5rem;
+.file-item .name { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-item .size { color: var(--slate-500); font-size: 0.8rem; }
+.file-item .remove {
+    cursor: pointer; color: var(--red-text); background: none; border: none;
+    font-size: 1.1rem; line-height: 1; padding: 0.15rem 0.3rem; border-radius: 4px;
+    transition: background var(--transition);
 }
-.language-select label {
+.file-item .remove:hover { background: var(--red-bg); }
+
+/* ── Form Controls ── */
+.form-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+    margin-bottom: 1.25rem;
+}
+.form-group { flex: 1; }
+.form-group label {
     display: block;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--slate-700);
+    margin-bottom: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
-.language-select select {
+.form-group select {
     width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    border: 1.5px solid var(--slate-200);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    color: var(--navy-900);
+    background: var(--white);
+    transition: border-color var(--transition);
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    padding-right: 2rem;
+}
+.form-group select:focus {
+    outline: none;
+    border-color: var(--navy-800);
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 0.75rem;
     font-size: 1rem;
 }
+
+/* ── Upload Progress ── */
 .upload-progress {
     display: none;
     margin-top: 1rem;
 }
 .upload-progress.visible { display: block; }
-.progress-bar {
+.progress-track {
     height: 6px;
-    background: #e2e8f0;
+    background: var(--slate-200);
     border-radius: 3px;
     overflow: hidden;
 }
-.progress-bar-fill {
+.progress-track-fill {
     height: 100%;
-    background: #0f3460;
+    background: linear-gradient(90deg, var(--navy-800), var(--teal-500));
     width: 0%;
-    transition: width 0.3s;
+    transition: width 0.3s ease;
+    border-radius: 3px;
 }
+.progress-info {
+    text-align: center;
+    margin-top: 0.5rem;
+    color: var(--slate-500);
+    font-size: 0.85rem;
+}
+
 .job-links { margin-top: 1rem; }
 .job-links a {
     display: block;
-    padding: 0.5rem;
-    background: #f1f5f9;
-    border-radius: 8px;
-    margin-bottom: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--slate-100);
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.4rem;
     text-decoration: none;
-    color: #0f3460;
+    color: var(--navy-800);
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: background var(--transition);
 }
-.job-links a:hover { background: #e2e8f0; }
-.formats { font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem; }
-.recent-jobs { margin-top: 1.5rem; }
-.recent-jobs h3 { font-size: 1rem; color: #334155; margin-bottom: 0.75rem; }
+.job-links a:hover { background: var(--slate-200); }
+
+/* ── History Section ── */
+.history-section {
+    margin-top: 0.5rem;
+}
+.history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+.history-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--navy-700);
+}
+
+/* ── Search ── */
+.search-box {
+    position: relative;
+    flex: 0 1 220px;
+}
+.search-box input {
+    width: 100%;
+    padding: 0.45rem 0.7rem 0.45rem 2rem;
+    border: 1.5px solid var(--slate-200);
+    border-radius: var(--radius-sm);
+    font-size: 0.825rem;
+    color: var(--navy-900);
+    transition: border-color var(--transition);
+}
+.search-box input:focus { outline: none; border-color: var(--navy-800); }
+.search-box input::placeholder { color: var(--slate-400); }
+.search-icon {
+    position: absolute;
+    left: 0.55rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    color: var(--slate-400);
+    pointer-events: none;
+}
+
+/* ── Filter Tabs ── */
+.filter-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+    background: var(--slate-100);
+    border-radius: var(--radius-sm);
+    padding: 0.2rem;
+}
+.filter-tab {
+    padding: 0.35rem 0.7rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--slate-500);
+    background: transparent;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+}
+.filter-tab:hover { color: var(--navy-700); }
+.filter-tab.active {
+    background: var(--white);
+    color: var(--navy-800);
+    box-shadow: var(--shadow-sm);
+}
+.filter-tab .count {
+    font-weight: 400;
+    font-size: 0.72rem;
+    opacity: 0.7;
+    margin-left: 0.15rem;
+}
+
+/* ── Job Rows ── */
 .job-row {
-    display: flex; align-items: center; gap: 0.75rem;
-    padding: 0.75rem 1rem; background: #f8fafc; border-radius: 8px; margin-bottom: 0.5rem;
-    text-decoration: none; color: inherit; transition: background 0.15s;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem 0.75rem;
+    padding: 0.75rem 0.85rem;
+    background: var(--slate-50);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.4rem;
+    text-decoration: none;
+    color: inherit;
+    transition: background var(--transition), box-shadow var(--transition);
+    align-items: center;
 }
-.job-row:hover { background: #e2e8f0; }
-.job-row .filename { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.job-row .meta { font-size: 0.8rem; color: #64748b; }
-.badge {
-    display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px;
-    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+.job-row:hover { background: var(--slate-200); box-shadow: var(--shadow-sm); }
+
+.job-row-main {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
 }
-.badge-pending { background: #fef3c7; color: #92400e; }
-.badge-converting, .badge-transcribing { background: #dbeafe; color: #1e40af; }
-.badge-completed { background: #d1fae5; color: #065f46; }
-.badge-failed { background: #fee2e2; color: #991b1b; }
-.empty-state { text-align: center; color: #94a3b8; padding: 1.5rem; font-size: 0.9rem; }
+.job-filename {
+    font-weight: 600;
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--navy-700);
+}
+.job-row-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    grid-column: 1 / -1;
+    font-size: 0.78rem;
+    color: var(--slate-500);
+}
+.meta-sep { opacity: 0.4; }
+.meta-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+/* ── Empty State ── */
+.empty-state {
+    text-align: center;
+    color: var(--slate-400);
+    padding: 2.5rem 1rem;
+    font-size: 0.9rem;
+}
+.empty-state-icon {
+    width: 40px;
+    height: 40px;
+    color: var(--slate-200);
+    margin: 0 auto 0.75rem;
+}
+.empty-state a {
+    color: var(--navy-800);
+    text-decoration: none;
+    font-weight: 600;
+}
+.empty-state a:hover { text-decoration: underline; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+    .form-row { flex-direction: column; }
+    .search-box { flex: 1 1 100%; }
+    .history-header { flex-direction: column; align-items: flex-start; }
+    .filter-tabs { flex-wrap: wrap; }
+    .job-row-meta { font-size: 0.72rem; }
+}
 {% endblock %}
 
 {% block content %}
-<div class="card">
+<div class="card upload-card">
     <form id="upload-form" enctype="multipart/form-data">
         <div class="drop-zone" id="drop-zone">
-            <div class="icon">&#127911;</div>
-            <p><strong>Drop audio files here</strong> or click to browse</p>
-            <p class="formats">MP3, WAV, FLAC, OGG &middot; Max 500 MB each &middot; Multiple files supported</p>
+            <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <p class="drop-zone-title">Drop audio files here</p>
+            <p class="drop-zone-sub">or click to browse your files</p>
+            <p class="drop-zone-formats">MP3, WAV, FLAC, OGG &middot; Max 500 MB each</p>
             <input type="file" id="file-input" name="file" accept=".mp3,.wav,.flac,.ogg" multiple hidden>
         </div>
 
         <div class="file-list" id="file-list"></div>
 
-        <div class="language-select">
-            <label for="language">Language</label>
-            <select name="language" id="language">
-                <option value="pt-BR" selected>Portuguese (Brazil)</option>
-                <option value="en-US">English (US)</option>
-                <option value="es-ES">Spanish (Spain)</option>
-            </select>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="language">Language</label>
+                <select name="language" id="language">
+                    <option value="pt-BR" selected>Portuguese (Brazil)</option>
+                    <option value="en-US">English (US)</option>
+                    <option value="es-ES">Spanish (Spain)</option>
+                </select>
+            </div>
         </div>
 
-        <button type="submit" class="btn btn-primary" id="submit-btn" disabled>Upload &amp; Transcribe</button>
+        <button type="submit" class="btn btn-primary submit-btn" id="submit-btn" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+            Upload &amp; Transcribe
+        </button>
 
         <div class="upload-progress" id="upload-progress">
-            <div class="progress-bar"><div class="progress-bar-fill" id="progress-fill"></div></div>
-            <p style="text-align:center;margin-top:0.5rem;color:#64748b" id="progress-text">Uploading...</p>
+            <div class="progress-track"><div class="progress-track-fill" id="progress-fill"></div></div>
+            <p class="progress-info" id="progress-text">Uploading...</p>
         </div>
 
         <div class="job-links" id="job-links" style="display:none"></div>
     </form>
 
     <div id="error-container"></div>
+</div>
 
-    <div class="recent-jobs" id="recent-jobs">
-        <h3>Recent Transcriptions</h3>
-        <div id="jobs-list"><div class="empty-state">Loading...</div></div>
+<div class="card history-section" id="history-section">
+    <div class="history-header">
+        <span class="history-title">Transcription History</span>
+        <div class="search-box">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="search-input" placeholder="Search by filename...">
+        </div>
+    </div>
+    <div class="filter-tabs" id="filter-tabs">
+        <button class="filter-tab active" data-filter="all">All <span class="count" id="count-all"></span></button>
+        <button class="filter-tab" data-filter="COMPLETED">Completed <span class="count" id="count-completed"></span></button>
+        <button class="filter-tab" data-filter="active">In Progress <span class="count" id="count-active"></span></button>
+        <button class="filter-tab" data-filter="FAILED">Failed <span class="count" id="count-failed"></span></button>
+    </div>
+    <div id="jobs-list">
+        <div class="empty-state">Loading...</div>
     </div>
 </div>
 {% endblock %}
@@ -151,14 +394,36 @@
     var progressText = document.getElementById('progress-text');
     var errorContainer = document.getElementById('error-container');
     var jobLinks = document.getElementById('job-links');
+    var searchInput = document.getElementById('search-input');
     var MAX_SIZE = 500 * 1024 * 1024;
     var ALLOWED = ['.mp3', '.wav', '.flac', '.ogg'];
     var selectedFiles = [];
+    var allJobs = [];
+    var currentFilter = 'all';
 
     function formatSize(bytes) {
+        if (bytes == null || bytes === 0) return '—';
         if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
-        return (bytes/(1024*1024)).toFixed(1) + ' MB';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function formatDuration(seconds) {
+        if (seconds == null) return '—';
+        var m = Math.floor(seconds / 60);
+        var s = Math.floor(seconds % 60);
+        return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    function timeAgo(dateStr) {
+        var now = new Date();
+        var then = new Date(dateStr);
+        var diff = Math.floor((now - then) / 1000);
+        if (diff < 60) return 'just now';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+        if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+        return then.toLocaleDateString();
     }
 
     function showError(msg) {
@@ -169,9 +434,7 @@
         errorContainer.appendChild(div);
     }
 
-    function clearError() {
-        errorContainer.textContent = '';
-    }
+    function clearError() { errorContainer.textContent = ''; }
 
     function renderFileList() {
         fileList.textContent = '';
@@ -229,10 +492,10 @@
         fileInput.value = '';
     });
 
-    ['dragenter','dragover'].forEach(function(e) {
+    ['dragenter', 'dragover'].forEach(function(e) {
         dropZone.addEventListener(e, function(ev) { ev.preventDefault(); dropZone.classList.add('dragover'); });
     });
-    ['dragleave','drop'].forEach(function(e) {
+    ['dragleave', 'drop'].forEach(function(e) {
         dropZone.addEventListener(e, function(ev) { ev.preventDefault(); dropZone.classList.remove('dragover'); });
     });
     dropZone.addEventListener('drop', function(ev) {
@@ -318,47 +581,135 @@
         uploadNext(0);
     });
 
-    // Load recent jobs
-    function loadRecentJobs() {
+    /* ── History: Filter & Search ── */
+
+    function isActiveStatus(status) {
+        return status === 'PENDING' || status === 'CONVERTING' || status === 'TRANSCRIBING';
+    }
+
+    function updateCounts() {
+        var all = allJobs.length;
+        var completed = 0, active = 0, failed = 0;
+        allJobs.forEach(function(j) {
+            if (j.status === 'COMPLETED') completed++;
+            else if (j.status === 'FAILED') failed++;
+            else if (isActiveStatus(j.status)) active++;
+        });
+        document.getElementById('count-all').textContent = '(' + all + ')';
+        document.getElementById('count-completed').textContent = '(' + completed + ')';
+        document.getElementById('count-active').textContent = '(' + active + ')';
+        document.getElementById('count-failed').textContent = '(' + failed + ')';
+    }
+
+    function filterJobs() {
+        var query = searchInput.value.toLowerCase().trim();
+        var container = document.getElementById('jobs-list');
+        container.textContent = '';
+
+        var filtered = allJobs.filter(function(job) {
+            var statusMatch = (currentFilter === 'all') ||
+                (currentFilter === 'active' && isActiveStatus(job.status)) ||
+                (job.status === currentFilter);
+            var searchMatch = !query || job.original_filename.toLowerCase().indexOf(query) !== -1;
+            return statusMatch && searchMatch;
+        });
+
+        if (allJobs.length === 0) {
+            container.innerHTML =
+                '<div class="empty-state">' +
+                '<svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>' +
+                '<p>No transcriptions yet</p>' +
+                '<p style="margin-top:0.35rem"><a href="#" onclick="document.getElementById(\'drop-zone\').click();return false;">Upload your first audio file</a> to get started</p>' +
+                '</div>';
+            return;
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML =
+                '<div class="empty-state">' +
+                '<p>No matching transcriptions</p>' +
+                '<p style="margin-top:0.25rem;font-size:0.82rem;">Try a different filter or search term</p>' +
+                '</div>';
+            return;
+        }
+
+        filtered.forEach(function(job) {
+            var a = document.createElement('a');
+            a.href = '/jobs/' + job.job_id;
+            a.className = 'job-row';
+            a.setAttribute('data-status', job.status);
+
+            var main = document.createElement('div');
+            main.className = 'job-row-main';
+
+            var nameSpan = document.createElement('span');
+            nameSpan.className = 'job-filename';
+            nameSpan.textContent = job.original_filename;
+
+            var badge = document.createElement('span');
+            var status = job.status.toLowerCase();
+            badge.className = 'badge badge-' + status;
+            badge.textContent = job.status;
+
+            main.appendChild(nameSpan);
+            a.appendChild(main);
+            a.appendChild(badge);
+
+            var meta = document.createElement('div');
+            meta.className = 'job-row-meta';
+
+            var parts = [];
+            if (job.language) parts.push(job.language);
+            if (job.engine_name) parts.push(job.engine_name);
+            if (job.size_bytes) parts.push(formatSize(job.size_bytes));
+            if (job.duration_seconds != null) parts.push(formatDuration(job.duration_seconds));
+            parts.push(timeAgo(job.created_at));
+
+            parts.forEach(function(text, i) {
+                var span = document.createElement('span');
+                span.className = 'meta-tag';
+                span.textContent = text;
+                meta.appendChild(span);
+                if (i < parts.length - 1) {
+                    var sep = document.createElement('span');
+                    sep.className = 'meta-sep';
+                    sep.textContent = '\u00B7';
+                    meta.appendChild(sep);
+                }
+            });
+
+            a.appendChild(meta);
+            container.appendChild(a);
+        });
+    }
+
+    // Filter tab clicks
+    document.getElementById('filter-tabs').addEventListener('click', function(e) {
+        var tab = e.target.closest('.filter-tab');
+        if (!tab) return;
+        document.querySelectorAll('.filter-tab').forEach(function(t) { t.classList.remove('active'); });
+        tab.classList.add('active');
+        currentFilter = tab.getAttribute('data-filter');
+        filterJobs();
+    });
+
+    // Search input
+    searchInput.addEventListener('input', function() { filterJobs(); });
+
+    // Load jobs
+    function loadJobs() {
         fetch('/api/jobs')
             .then(function(r) { return r.json(); })
             .then(function(jobs) {
-                var container = document.getElementById('jobs-list');
-                if (!jobs.length) {
-                    container.innerHTML = '<div class="empty-state">No transcriptions yet. Upload an audio file to get started.</div>';
-                    return;
-                }
-                container.textContent = '';
-                jobs.forEach(function(job) {
-                    var a = document.createElement('a');
-                    a.href = '/jobs/' + job.job_id;
-                    a.className = 'job-row';
-
-                    var nameSpan = document.createElement('span');
-                    nameSpan.className = 'filename';
-                    nameSpan.textContent = job.original_filename;
-
-                    var badge = document.createElement('span');
-                    var status = job.status.toLowerCase();
-                    badge.className = 'badge badge-' + status;
-                    badge.textContent = job.status;
-
-                    var meta = document.createElement('span');
-                    meta.className = 'meta';
-                    var d = new Date(job.created_at);
-                    meta.textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-
-                    a.appendChild(nameSpan);
-                    a.appendChild(badge);
-                    a.appendChild(meta);
-                    container.appendChild(a);
-                });
+                allJobs = jobs;
+                updateCounts();
+                filterJobs();
             })
             .catch(function() {
-                document.getElementById('jobs-list').innerHTML = '<div class="empty-state">Could not load recent jobs.</div>';
+                document.getElementById('jobs-list').innerHTML = '<div class="empty-state">Could not load transcription history.</div>';
             });
     }
-    loadRecentJobs();
+    loadJobs();
 })();
 </script>
 {% endblock %}

@@ -1,38 +1,43 @@
-[tool.poetry]
+[project]
 name = "audio"
 version = "0.2.0"
 description = "Audio transcription tool with web UI and hexagonal architecture"
-authors = ["Pedro Balbino <phsb5321@gmail.com>"]
+authors = [{ name = "Pedro Balbino", email = "phsb5321@gmail.com" }]
 readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # Web framework
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.18",
+    # Transcription engines
+    "faster-whisper>=1.1.0",
+    "openai>=1.60.0",
+    # Audio processing
+    "pydub>=0.25.1",
+    "audioop-lts>=0.2.1; python_version >= '3.13'",
+    # Background jobs
+    "rq>=2.1.0",
+    "redis>=5.0.0",
+    # DNS
+    "dnspython>=2.7.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-# Web framework
-fastapi = ">=0.115.0"
-uvicorn = {version = ">=0.34.0", extras = ["standard"]}
-jinja2 = ">=3.1.0"
-python-multipart = ">=0.0.18"
-# Transcription engines
-faster-whisper = ">=1.1.0"
-openai = ">=1.60.0"
-# Audio processing
-pydub = ">=0.25.1"
-audioop-lts = {version = ">=0.2.1", python = ">=3.13"}
-# Background jobs
-rq = ">=2.1.0"
-redis = ">=5.0.0"
-# Existing deps (kept for backward compat)
-dnspython = ">=2.7.0"
-
-[tool.poetry.group.dev.dependencies]
-pytest = ">=8.0.0"
-httpx = ">=0.28.0"
-pytest-asyncio = ">=0.25.0"
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "httpx>=0.28.0",
+    "pytest-asyncio>=0.25.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
