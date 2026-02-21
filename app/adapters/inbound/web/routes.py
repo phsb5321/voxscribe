@@ -102,6 +102,9 @@ async def list_jobs():
             "original_filename": audio.original_filename if audio else "unknown",
             "created_at": job.created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "error_message": job.error_message,
+            "size_bytes": audio.size_bytes if audio else 0,
+            "duration_seconds": audio.duration_seconds if audio else None,
+            "format": audio.format.value if audio else None,
         })
     return result
 

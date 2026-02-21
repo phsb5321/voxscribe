@@ -10,23 +10,23 @@ Web-based audio transcriber that converts audio files (MP3, WAV, FLAC, OGG) to t
 
 ### Development
 ```bash
-# Install dependencies (NixOS: use nix-shell -p poetry)
-poetry install
+# Install dependencies
+uv sync
 
 # Run web server
-poetry run uvicorn app.main:create_app --factory --host 0.0.0.0 --port 5000
+uv run uvicorn app.main:create_app --factory --host 0.0.0.0 --port 5000
 
 # Run background worker (requires Redis)
-poetry run rq worker --url redis://localhost:6379
+uv run rq worker --url redis://localhost:6379
 
 # Run all tests
-poetry run pytest tests/ -v
+uv run pytest tests/ -v
 
 # Run specific test file
-poetry run pytest tests/unit/domain/test_chunking_strategy.py -v
+uv run pytest tests/unit/domain/test_chunking_strategy.py -v
 
 # CLI backward compatibility
-poetry run python -m app.adapters.inbound.cli DATA/ --language pt-BR
+uv run python -m app.adapters.inbound.cli DATA/ --language pt-BR
 ```
 
 ### Docker
@@ -74,3 +74,10 @@ Hexagonal (ports & adapters) architecture with clean dependency inversion.
 - `tests/unit/application/` — Use cases with mocked ports
 - `tests/integration/adapters/` — SQLite repo, file storage, pydub converter (real I/O)
 - `tests/e2e/` — Full API tests via httpx AsyncClient (uses NoOpQueue, no Redis needed)
+
+## Active Technologies
+- Python 3.12, Jinja2 templates, vanilla JavaScript + FastAPI, Jinja2, HTMX 2.0.4 (already loaded via CDN) (001-ui-redesign)
+- SQLite (no changes) (001-ui-redesign)
+
+## Recent Changes
+- 001-ui-redesign: Added Python 3.12, Jinja2 templates, vanilla JavaScript + FastAPI, Jinja2, HTMX 2.0.4 (already loaded via CDN)

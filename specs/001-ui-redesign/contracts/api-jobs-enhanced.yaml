@@ -1,0 +1,65 @@
+# Enhanced /api/jobs response contract
+# Only change: 3 new fields added to each job object
+
+endpoint: GET /api/jobs
+status: 200
+content_type: application/json
+
+response_schema:
+  type: array
+  items:
+    type: object
+    required:
+      - job_id
+      - status
+      - progress_percent
+      - language
+      - engine_name
+      - original_filename
+      - created_at
+      - error_message
+      # NEW fields:
+      - size_bytes
+      - duration_seconds
+      - format
+    properties:
+      job_id:
+        type: string
+        format: uuid
+      status:
+        type: string
+        enum: [PENDING, CONVERTING, TRANSCRIBING, COMPLETED, FAILED]
+      progress_percent:
+        type: integer
+        minimum: 0
+        maximum: 100
+      language:
+        type: string
+        example: "pt-BR"
+      engine_name:
+        type: string
+        example: "groq"
+      original_filename:
+        type: string
+        example: "audio_recording.mp3"
+      created_at:
+        type: string
+        format: date-time
+        example: "2026-02-20T21:40:28Z"
+      error_message:
+        type: string
+        nullable: true
+      # NEW:
+      size_bytes:
+        type: integer
+        example: 1048576
+        description: "File size in bytes from AudioFile entity"
+      duration_seconds:
+        type: number
+        nullable: true
+        example: 125.5
+        description: "Audio duration in seconds (null if not yet converted)"
+      format:
+        type: string
+        enum: [MP3, WAV, FLAC, OGG]
+        description: "Audio file format"

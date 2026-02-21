@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Modern Audio Transcription Web UI
+# Specification Quality Checklist: UI/UX Redesign & Transcription History
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-02-20
@@ -31,10 +31,5 @@
 
 ## Notes
 
-- FR-015 mentions "hexagonal (ports and adapters) architecture" -- this is an explicit
-  user requirement for the architectural approach, not a leaked implementation detail.
-  It defines WHAT structure is required, not HOW to implement it.
-- FR-010 mentions "Dokku" and "Dockerfile" -- these are explicit user deployment
-  constraints, not leaked implementation details. The user specifically requested
-  Dokku deployment via SSH to ProxMox.Dokku.
-- All items pass. Spec is ready for `/speckit.clarify` or `/speckit.plan`.
+- All items pass validation. Spec is ready for `/speckit.clarify` or `/speckit.plan`.
+- Assumptions section documents reasonable defaults for logo style, tech approach, and data sources.

@@ -1,73 +1,190 @@
 {% extends "base.html" %}
 
-{% block title %}Job {{ job.job_id | string | truncate(8, True, '') }} — Audio Transcriber{% endblock %}
+{% block title %}Job {{ job.job_id | string | truncate(8, True, '') }} — Voxscribe{% endblock %}
 
 {% block extra_styles %}
+/* ── Status Badge ── */
 .status-badge {
     display: inline-block;
     padding: 0.25rem 0.75rem;
     border-radius: 20px;
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: 0.8rem;
+    font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
-.status-PENDING { background: #fef3c7; color: #92400e; }
-.status-CONVERTING { background: #dbeafe; color: #1e40af; }
-.status-TRANSCRIBING { background: #e0e7ff; color: #3730a3; }
-.status-COMPLETED { background: #dcfce7; color: #166534; }
-.status-FAILED { background: #fee2e2; color: #991b1b; }
+.status-PENDING { background: var(--amber-bg); color: var(--amber-text); }
+.status-CONVERTING { background: var(--blue-bg); color: var(--blue-text); }
+.status-TRANSCRIBING { background: var(--indigo-bg); color: var(--indigo-text); }
+.status-COMPLETED { background: var(--green-bg); color: var(--green-text); }
+.status-FAILED { background: var(--red-bg); color: var(--red-text); }
 
-.progress-section { margin: 1.5rem 0; }
-.progress-bar {
-    height: 8px;
-    background: #e2e8f0;
-    border-radius: 4px;
+/* ── Job Header ── */
+.job-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+.job-header h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--navy-700);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1;
+}
+
+/* ── Progress ── */
+.progress-section {
+    margin: 1.25rem 0;
+}
+.progress-bar-wrap {
+    height: 10px;
+    background: var(--slate-200);
+    border-radius: 5px;
     overflow: hidden;
 }
 .progress-bar-fill {
     height: 100%;
-    background: #0f3460;
+    background: linear-gradient(90deg, var(--navy-800), var(--teal-500));
     transition: width 0.5s ease;
+    border-radius: 5px;
 }
-.progress-label {
-    text-align: center;
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-top: 0.5rem;
-    color: #64748b;
-    font-size: 0.875rem;
 }
+.progress-stage {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--navy-700);
+}
+.progress-pct {
+    font-size: 0.85rem;
+    color: var(--slate-500);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Metadata Grid ── */
 .meta-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-    margin: 1.5rem 0;
-    font-size: 0.9rem;
+    gap: 0.6rem 1.5rem;
+    margin: 1.25rem 0;
+    font-size: 0.875rem;
 }
-.meta-grid dt { color: #64748b; }
-.meta-grid dd { font-weight: 500; }
+.meta-grid dt {
+    color: var(--slate-500);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+.meta-grid dd { font-weight: 500; color: var(--navy-900); }
 
-.result-section { margin-top: 2rem; }
+/* ── Word Count Bar ── */
+.word-count-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.85rem;
+    background: var(--slate-50);
+    border-radius: var(--radius-sm);
+    margin-bottom: 1rem;
+    font-size: 0.82rem;
+    color: var(--slate-500);
+    flex-wrap: wrap;
+}
+.word-count-bar .wc-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.word-count-bar .wc-val {
+    font-weight: 700;
+    color: var(--navy-700);
+}
+.word-count-bar .wc-sep { opacity: 0.35; }
+
+/* ── Result Section ── */
+.result-section { margin-top: 1.5rem; }
+.result-label {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--navy-700);
+    margin-bottom: 0.65rem;
+}
 .result-text {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
+    background: var(--slate-50);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-md);
     padding: 1.5rem;
     white-space: pre-wrap;
-    font-size: 0.95rem;
-    line-height: 1.7;
-    max-height: 500px;
+    font-size: 1.05rem;
+    line-height: 1.85;
+    max-height: 550px;
     overflow-y: auto;
+    color: var(--navy-900);
+    max-width: 72ch;
 }
 .result-actions {
     display: flex;
-    gap: 0.75rem;
-    margin-top: 1rem;
+    gap: 0.6rem;
+    margin-top: 0.85rem;
+    flex-wrap: wrap;
 }
-.error-detail {
-    background: #fee2e2;
-    color: #991b1b;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-top: 1rem;
+.copy-feedback {
+    display: none;
+    font-size: 0.82rem;
+    color: var(--green-text);
+    font-weight: 600;
+    align-self: center;
+}
+.copy-feedback.show { display: inline-block; }
+
+/* ── Error Section ── */
+.error-card {
+    background: var(--red-bg);
+    border: 1px solid #fecaca;
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    margin-top: 1.25rem;
+}
+.error-card-title {
+    font-weight: 700;
+    color: var(--red-text);
+    margin-bottom: 0.35rem;
+    font-size: 0.95rem;
+}
+.error-card-msg {
+    color: #7f1d1d;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+/* ── Footer Actions ── */
+.page-actions {
+    margin-top: 2rem;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 0.6rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+    .meta-grid { grid-template-columns: 1fr; gap: 0.5rem; }
+    .result-text { font-size: 0.95rem; padding: 1rem; max-width: 100%; }
+    .job-header h2 { font-size: 1rem; }
+    .word-count-bar { font-size: 0.75rem; gap: 0.5rem; }
 }
 {% endblock %}
 
@@ -81,8 +198,8 @@
      hx-target="#sse-target"
      {% endif %}>
 
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-        <h2 style="font-size:1.2rem;">{{ job.audio_file.original_filename if job.audio_file else 'Processing...' }}</h2>
+    <div class="job-header">
+        <h2>{{ job.audio_file.original_filename if job.audio_file else 'Processing...' }}</h2>
         <span class="status-badge status-{{ job.status }}" id="status-badge">{{ job.status }}</span>
     </div>
 
@@ -90,13 +207,24 @@
         {% include "partials/job_progress.html" ignore missing %}
     </div>
 
-    <div class="progress-section" id="progress-section">
-        <div class="progress-bar">
+    <!-- Progress Section -->
+    <div class="progress-section" id="progress-section"
+         {% if job.status in ('COMPLETED', 'FAILED') %}style="display:none"{% endif %}>
+        <div class="progress-bar-wrap">
             <div class="progress-bar-fill" id="progress-fill" style="width: {{ job.progress_percent }}%"></div>
         </div>
-        <div class="progress-label" id="progress-label">{{ job.progress_percent }}%</div>
+        <div class="progress-info">
+            <span class="progress-stage" id="progress-stage">
+                {% if job.status == 'CONVERTING' %}Converting audio...
+                {% elif job.status == 'TRANSCRIBING' %}Transcribing...
+                {% elif job.status == 'PENDING' %}Waiting in queue...
+                {% else %}Processing...{% endif %}
+            </span>
+            <span class="progress-pct" id="progress-label">{{ job.progress_percent }}%</span>
+        </div>
     </div>
 
+    <!-- Metadata -->
     <dl class="meta-grid">
         <dt>Language</dt>
         <dd>{{ job.language }}</dd>
@@ -109,56 +237,93 @@
         <dd>{{ "%.1f"|format(job.audio_file.size_bytes / 1048576) }} MB</dd>
         {% if job.audio_file.duration_seconds %}
         <dt>Duration</dt>
-        <dd>{{ "%.0f"|format(job.audio_file.duration_seconds) }}s</dd>
+        <dd>{{ "%d"|format(job.audio_file.duration_seconds // 60) }}:{{ "%02d"|format((job.audio_file.duration_seconds % 60) | int) }}</dd>
         {% endif %}
         {% endif %}
     </dl>
 
+    <!-- Failed State -->
     {% if job.status == 'FAILED' and job.error_message %}
-    <div class="error-detail">
-        <strong>Error:</strong> {{ job.error_message }}
+    <div class="error-card">
+        <div class="error-card-title">Transcription Failed</div>
+        <div class="error-card-msg">{{ job.error_message }}</div>
     </div>
     {% endif %}
 
+    <!-- Completed Result -->
     {% if result %}
     <div class="result-section">
-        <h3 style="margin-bottom:0.75rem;">Transcription</h3>
+        <div class="word-count-bar" id="word-count-bar">
+            <span class="wc-item"><span class="wc-val" id="word-count">—</span> words</span>
+            <span class="wc-sep">&middot;</span>
+            {% if job.audio_file and job.audio_file.duration_seconds %}
+            <span class="wc-item"><span class="wc-val">{{ "%d"|format(job.audio_file.duration_seconds // 60) }}:{{ "%02d"|format((job.audio_file.duration_seconds % 60) | int) }}</span> duration</span>
+            <span class="wc-sep">&middot;</span>
+            {% endif %}
+            <span class="wc-item">{{ result.engine_name }}</span>
+            <span class="wc-sep">&middot;</span>
+            <span class="wc-item">{{ "%.1f"|format(result.processing_duration_seconds) }}s processing</span>
+        </div>
+        <div class="result-label">Transcription</div>
         <div class="result-text" id="result-text">{{ result.full_text }}</div>
         <div class="result-actions">
-            <button class="btn btn-primary" onclick="copyText()">Copy to Clipboard</button>
-            <a class="btn btn-secondary" href="/api/jobs/{{ job.job_id }}/result/download">Download TXT</a>
+            <button class="btn btn-primary" id="copy-btn" onclick="copyText()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                Copy to Clipboard
+            </button>
+            <a class="btn btn-secondary" href="/api/jobs/{{ job.job_id }}/result/download">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download TXT
+            </a>
+            <span class="copy-feedback" id="copy-feedback">Copied!</span>
         </div>
-        <p style="margin-top:0.75rem;font-size:0.8rem;color:#94a3b8;">
-            Processed in {{ "%.1f"|format(result.processing_duration_seconds) }}s
-            using {{ result.engine_name }}
-        </p>
     </div>
     {% endif %}
 
-    <div style="margin-top:2rem;text-align:center;">
-        <a href="/" class="btn btn-secondary">Upload Another File</a>
+    <div class="page-actions">
+        {% if job.status == 'FAILED' %}
+        <a href="/" class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+            Upload Another File
+        </a>
+        {% else %}
+        <a href="/" class="btn btn-secondary">Back to Upload</a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
+(function() {
+    // Word count
+    var resultEl = document.getElementById('result-text');
+    var wcEl = document.getElementById('word-count');
+    if (resultEl && wcEl) {
+        var text = resultEl.textContent.trim();
+        var count = text ? text.split(/\s+/).length : 0;
+        wcEl.textContent = count.toLocaleString();
+    }
+})();
+
 function copyText() {
-    const text = document.getElementById('result-text').textContent;
-    navigator.clipboard.writeText(text).then(() => {
-        const btn = event.target;
-        const orig = btn.textContent;
-        btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = orig; }, 2000);
+    var text = document.getElementById('result-text').textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        var fb = document.getElementById('copy-feedback');
+        fb.classList.add('show');
+        setTimeout(function() { fb.classList.remove('show'); }, 2000);
     });
 }
 
+// SSE progress updates
 document.body.addEventListener('sse:status', function(evt) {
     try {
-        const data = JSON.parse(evt.detail.data);
-        const badge = document.getElementById('status-badge');
-        const fill = document.getElementById('progress-fill');
-        const label = document.getElementById('progress-label');
+        var data = JSON.parse(evt.detail.data);
+        var badge = document.getElementById('status-badge');
+        var fill = document.getElementById('progress-fill');
+        var label = document.getElementById('progress-label');
+        var stage = document.getElementById('progress-stage');
+        var section = document.getElementById('progress-section');
 
         if (badge) {
             badge.textContent = data.status;
@@ -166,9 +331,16 @@ document.body.addEventListener('sse:status', function(evt) {
         }
         if (fill) fill.style.width = data.progress_percent + '%';
         if (label) label.textContent = data.progress_percent + '%';
+        if (stage) {
+            if (data.status === 'CONVERTING') stage.textContent = 'Converting audio...';
+            else if (data.status === 'TRANSCRIBING') stage.textContent = 'Transcribing...';
+            else if (data.status === 'PENDING') stage.textContent = 'Waiting in queue...';
+            else stage.textContent = 'Processing...';
+        }
 
         if (data.status === 'COMPLETED' || data.status === 'FAILED') {
-            setTimeout(() => location.reload(), 500);
+            if (section) section.style.display = 'none';
+            setTimeout(function() { location.reload(); }, 500);
         }
     } catch(e) {}
 });

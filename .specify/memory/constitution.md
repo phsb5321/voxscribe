@@ -62,10 +62,10 @@ complexity.
 
 ### V. Dependency Hygiene
 
-All runtime imports MUST have corresponding entries in `pyproject.toml`
-(Poetry) AND `requirements.txt` (Docker). Adding a new dependency requires
-updating both files. System-level dependencies (apt packages) MUST be
-documented in the Dockerfile. Rationale: the project currently has a
+All runtime imports MUST have corresponding entries in `pyproject.toml`.
+Adding a new dependency requires running `uv add <package>` (which updates
+both pyproject.toml and uv.lock). System-level dependencies (apt packages)
+MUST be documented in the Dockerfile. Rationale: the project currently has a
 known violation (`dnspython` is imported but not declared); this principle
 prevents recurrence.
 
@@ -80,9 +80,8 @@ prevents recurrence.
 
 ## Development Workflow
 
-- **Package manager**: Poetry (local dev), pip via `requirements.txt`
-  (Docker builds).
-- **Run locally**: `poetry install && python main.py`
+- **Package manager**: uv (local dev and Docker builds).
+- **Run locally**: `uv sync && uv run python main.py`
 - **Run via Docker**: `bash START.SH`
 - **No test suite exists yet**. When tests are added, they MUST be
   runnable via `pytest` and MUST NOT require network access for unit-level
