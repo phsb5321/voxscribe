@@ -190,6 +190,7 @@
     border-radius: var(--radius-sm);
     font-size: 0.825rem;
     color: var(--navy-900);
+    background: var(--white);
     transition: border-color var(--transition);
 }
 .search-box input:focus { outline: none; border-color: var(--navy-800); }
@@ -325,10 +326,71 @@
     background: #fecaca;
     border-color: var(--red-text);
 }
+[data-theme="dark"] .btn-cleanup:hover {
+    background: #7f1d1d;
+}
 .btn-cleanup:active {
     transform: scale(0.97);
 }
 .btn-cleanup:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Skeleton Loading ── */
+.skeleton-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem 0.75rem;
+    padding: 0.75rem 0.85rem;
+    background: var(--slate-50);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.4rem;
+    align-items: center;
+}
+.skeleton-line {
+    height: 0.85rem;
+    background: linear-gradient(90deg, var(--slate-200) 25%, var(--slate-100) 50%, var(--slate-200) 75%);
+    background-size: 200% 100%;
+    border-radius: 4px;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+.skeleton-line.w-60 { width: 60%; }
+.skeleton-line.w-40 { width: 40%; }
+.skeleton-line.w-20 { width: 4rem; }
+.skeleton-meta {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 0.5rem;
+}
+.skeleton-meta .skeleton-line { height: 0.7rem; width: 3.5rem; }
+
+@keyframes skeleton-pulse {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ── Load More Button ── */
+.load-more-wrap {
+    text-align: center;
+    margin-top: 0.75rem;
+}
+.btn-load-more {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.82rem;
+    background: var(--slate-100);
+    color: var(--slate-500);
+    border: 1.5px solid var(--slate-200);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.btn-load-more:hover {
+    background: var(--slate-200);
+    color: var(--navy-700);
+}
+.btn-load-more:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
@@ -397,7 +459,7 @@
                 </svg>
                 <input type="text" id="search-input" placeholder="Search by filename...">
             </div>
-            <button type="button" class="btn btn-cleanup" id="cleanup-btn" title="Delete all transcriptions" style="display:none;">
+            <button type="button" class="btn-cleanup" id="cleanup-btn" title="Delete all transcriptions" style="display:none;">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                 </svg>
@@ -411,8 +473,9 @@
         <button class="filter-tab" data-filter="active">In Progress <span class="count" id="count-active"></span></button>
         <button class="filter-tab" data-filter="FAILED">Failed <span class="count" id="count-failed"></span></button>
     </div>
-    <div id="jobs-list">
-        <div class="empty-state">Loading...</div>
+    <div id="jobs-list"></div>
+    <div id="load-more-wrap" class="load-more-wrap" style="display:none;">
+        <button type="button" class="btn-load-more" id="load-more-btn">Load More</button>
     </div>
 </div>
 {% endblock %}
@@ -431,22 +494,28 @@
     var errorContainer = document.getElementById('error-container');
     var jobLinks = document.getElementById('job-links');
     var searchInput = document.getElementById('search-input');
+    var cleanupBtn = document.getElementById('cleanup-btn');
+    var loadMoreBtn = document.getElementById('load-more-btn');
+    var loadMoreWrap = document.getElementById('load-more-wrap');
     var MAX_SIZE = 500 * 1024 * 1024;
     var ALLOWED = ['.mp3', '.wav', '.flac', '.ogg'];
+    var PAGE_SIZE = 50;
     var selectedFiles = [];
     var allJobs = [];
     var currentFilter = 'all';
-    var cleanupBtn = document.getElementById('cleanup-btn');
+    var currentOffset = 0;
+    var hasMore = false;
+    var refreshTimer = null;
 
     function formatSize(bytes) {
-        if (bytes == null || bytes === 0) return '—';
+        if (bytes == null || bytes === 0) return '\u2014';
         if (bytes < 1024) return bytes + ' B';
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
     function formatDuration(seconds) {
-        if (seconds == null) return '—';
+        if (seconds == null) return '\u2014';
         var m = Math.floor(seconds / 60);
         var s = Math.floor(seconds % 60);
         return m + ':' + (s < 10 ? '0' : '') + s;
@@ -473,6 +542,26 @@
 
     function clearError() { errorContainer.textContent = ''; }
 
+    /* ── Skeleton Loader ── */
+    function showSkeleton() {
+        var container = document.getElementById('jobs-list');
+        var html = '';
+        for (var i = 0; i < 4; i++) {
+            html +=
+                '<div class="skeleton-row">' +
+                    '<div class="skeleton-line w-60"></div>' +
+                    '<div class="skeleton-line w-20"></div>' +
+                    '<div class="skeleton-meta">' +
+                        '<div class="skeleton-line"></div>' +
+                        '<div class="skeleton-line"></div>' +
+                        '<div class="skeleton-line"></div>' +
+                    '</div>' +
+                '</div>';
+        }
+        container.innerHTML = html;
+    }
+
+    /* ── File Handling ── */
     function renderFileList() {
         fileList.textContent = '';
         selectedFiles.forEach(function(file, idx) {
@@ -539,6 +628,7 @@
         if (ev.dataTransfer.files.length) addFiles(ev.dataTransfer.files);
     });
 
+    /* ── Upload ── */
     form.addEventListener('submit', function(ev) {
         ev.preventDefault();
         clearError();
@@ -568,9 +658,11 @@
                     redirectUrls.forEach(function(url, i) {
                         var a = document.createElement('a');
                         a.href = url;
-                        a.textContent = 'Job ' + (i + 1) + ' — ' + selectedFiles[i].name;
+                        a.textContent = 'Job ' + (i + 1) + ' \u2014 ' + selectedFiles[i].name;
                         jobLinks.appendChild(a);
                     });
+                    /* Refresh job list after multi-upload */
+                    loadJobs();
                 }
                 return;
             }
@@ -587,7 +679,7 @@
                     var filePct = (e.loaded / e.total);
                     var overallPct = Math.round(((completed + filePct) / total) * 100);
                     progressFill.style.width = overallPct + '%';
-                    progressText.textContent = 'Uploading file ' + (index + 1) + '/' + total + '... ' + overallPct + '%';
+                    progressText.textContent = 'Uploading ' + selectedFiles[index].name + ' (' + (index + 1) + '/' + total + ') ' + overallPct + '%';
                 }
             });
 
@@ -622,6 +714,13 @@
 
     function isActiveStatus(status) {
         return status === 'PENDING' || status === 'CONVERTING' || status === 'TRANSCRIBING';
+    }
+
+    function hasActiveJobs() {
+        for (var i = 0; i < allJobs.length; i++) {
+            if (isActiveStatus(allJobs[i].status)) return true;
+        }
+        return false;
     }
 
     function updateCounts() {
@@ -742,28 +841,104 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 allJobs = [];
+                currentOffset = 0;
+                hasMore = false;
                 updateCounts();
                 filterJobs();
                 cleanupBtn.style.display = 'none';
+                loadMoreWrap.style.display = 'none';
                 cleanupBtn.disabled = false;
                 cleanupBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg> Clear All';
+                showToast(data.deleted + ' transcription' + (data.deleted !== 1 ? 's' : '') + ' deleted', 'success');
             })
             .catch(function() {
-                alert('Failed to delete transcriptions. Please try again.');
+                showToast('Failed to delete transcriptions', 'error');
                 cleanupBtn.disabled = false;
                 cleanupBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg> Clear All';
             });
     });
 
-    // Load jobs
+    // Load More button
+    loadMoreBtn.addEventListener('click', function() {
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.textContent = 'Loading...';
+        currentOffset += PAGE_SIZE;
+        fetch('/api/jobs?limit=' + PAGE_SIZE + '&offset=' + currentOffset)
+            .then(function(r) { return r.json(); })
+            .then(function(jobs) {
+                allJobs = allJobs.concat(jobs);
+                hasMore = jobs.length >= PAGE_SIZE;
+                loadMoreWrap.style.display = hasMore ? '' : 'none';
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.textContent = 'Load More';
+                updateCounts();
+                filterJobs();
+            })
+            .catch(function() {
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.textContent = 'Load More';
+                showToast('Failed to load more jobs', 'error');
+            });
+    });
+
+    /* ── Auto-refresh for in-progress jobs ── */
+    function startAutoRefresh() {
+        stopAutoRefresh();
+        refreshTimer = setInterval(function() {
+            if (!hasActiveJobs()) {
+                stopAutoRefresh();
+                return;
+            }
+            fetch('/api/jobs?limit=' + PAGE_SIZE + '&offset=0')
+                .then(function(r) { return r.json(); })
+                .then(function(freshJobs) {
+                    /* Merge: update existing jobs in-place, prepend new ones */
+                    var existingMap = {};
+                    allJobs.forEach(function(j) { existingMap[j.job_id] = j; });
+
+                    freshJobs.forEach(function(fresh) {
+                        if (existingMap[fresh.job_id]) {
+                            /* Update status fields */
+                            var existing = existingMap[fresh.job_id];
+                            existing.status = fresh.status;
+                            existing.progress_percent = fresh.progress_percent;
+                            existing.error_message = fresh.error_message;
+                        } else {
+                            /* New job appeared (e.g. uploaded in another tab) */
+                            allJobs.unshift(fresh);
+                        }
+                    });
+
+                    updateCounts();
+                    filterJobs();
+
+                    if (!hasActiveJobs()) stopAutoRefresh();
+                });
+        }, 5000);
+    }
+
+    function stopAutoRefresh() {
+        if (refreshTimer) {
+            clearInterval(refreshTimer);
+            refreshTimer = null;
+        }
+    }
+
+    /* ── Initial Load ── */
+    showSkeleton();
+
     function loadJobs() {
-        fetch('/api/jobs')
+        currentOffset = 0;
+        fetch('/api/jobs?limit=' + PAGE_SIZE + '&offset=0')
             .then(function(r) { return r.json(); })
             .then(function(jobs) {
                 allJobs = jobs;
+                hasMore = jobs.length >= PAGE_SIZE;
                 updateCounts();
                 filterJobs();
                 cleanupBtn.style.display = allJobs.length > 0 ? '' : 'none';
+                loadMoreWrap.style.display = hasMore ? '' : 'none';
+                if (hasActiveJobs()) startAutoRefresh();
             })
             .catch(function() {
                 document.getElementById('jobs-list').innerHTML = '<div class="empty-state">Could not load transcription history.</div>';

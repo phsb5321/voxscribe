@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +7,15 @@
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+    <script>
+        /* Apply saved theme instantly to prevent flash */
+        (function() {
+            var saved = localStorage.getItem('voxscribe-theme');
+            if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -44,6 +53,35 @@
             --transition: 0.2s ease;
         }
 
+        /* ── Dark Theme ── */
+        [data-theme="dark"] {
+            --navy-900: #e2e8f0;
+            --navy-800: #93c5fd;
+            --navy-700: #cbd5e1;
+            --navy-600: #94a3b8;
+            --slate-700: #cbd5e1;
+            --slate-500: #94a3b8;
+            --slate-400: #64748b;
+            --slate-200: #334155;
+            --slate-100: #1e293b;
+            --slate-50: #1e293b;
+            --white: #0f172a;
+            --bg: #0b1121;
+            --green-bg: #052e16;
+            --green-text: #86efac;
+            --blue-bg: #172554;
+            --blue-text: #93c5fd;
+            --indigo-bg: #1e1b4b;
+            --indigo-text: #a5b4fc;
+            --amber-bg: #451a03;
+            --amber-text: #fcd34d;
+            --red-bg: #450a0a;
+            --red-text: #fca5a5;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             line-height: 1.6;
@@ -61,6 +99,7 @@
         header {
             padding: 1.5rem 0 1.25rem;
             text-align: center;
+            position: relative;
         }
 
         .logo-link {
@@ -88,17 +127,52 @@
             color: var(--teal-500);
         }
 
+        [data-theme="dark"] .logo-text span {
+            color: var(--teal-400);
+        }
+
         header p {
             color: var(--slate-500);
             margin-top: 0.2rem;
             font-size: 0.9rem;
         }
 
+        /* ── Theme Toggle ── */
+        .theme-toggle {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--slate-100);
+            border: 1.5px solid var(--slate-200);
+            border-radius: var(--radius-sm);
+            padding: 0.4rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--slate-500);
+            transition: background var(--transition), color var(--transition), border-color var(--transition);
+        }
+        .theme-toggle:hover {
+            background: var(--slate-200);
+            color: var(--navy-800);
+        }
+        .theme-toggle svg { width: 18px; height: 18px; }
+        .theme-toggle .icon-sun { display: none; }
+        .theme-toggle .icon-moon { display: block; }
+        [data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+        [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+
         .card {
             background: var(--white);
             border-radius: var(--radius-lg);
             padding: 2rem;
             box-shadow: var(--shadow-md);
+        }
+
+        [data-theme="dark"] .card {
+            border: 1px solid var(--slate-200);
         }
 
         .btn {
@@ -125,11 +199,23 @@
         }
         .btn-primary:hover { background: var(--navy-700); box-shadow: var(--shadow-sm); }
 
+        [data-theme="dark"] .btn-primary {
+            background: #3b82f6;
+            color: #0f172a;
+        }
+        [data-theme="dark"] .btn-primary:hover {
+            background: #60a5fa;
+        }
+
         .btn-secondary {
             background: var(--slate-200);
             color: var(--navy-900);
         }
         .btn-secondary:hover { background: #cbd5e1; }
+
+        [data-theme="dark"] .btn-secondary:hover {
+            background: #475569;
+        }
 
         .error-msg {
             background: var(--red-bg);
@@ -163,12 +249,68 @@
         .badge-completed { background: var(--green-bg); color: var(--green-text); }
         .badge-failed { background: var(--red-bg); color: var(--red-text); }
 
+        /* ── Toast Notifications ── */
+        .toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+        .toast {
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            font-weight: 500;
+            box-shadow: var(--shadow-lg);
+            animation: toast-in 0.3s ease forwards;
+            max-width: 360px;
+        }
+        .toast.toast-out {
+            animation: toast-out 0.25s ease forwards;
+        }
+        .toast-success {
+            background: var(--green-bg);
+            color: var(--green-text);
+            border: 1px solid var(--green-text);
+        }
+        .toast-error {
+            background: var(--red-bg);
+            color: var(--red-text);
+            border: 1px solid var(--red-text);
+        }
+        .toast-info {
+            background: var(--blue-bg);
+            color: var(--blue-text);
+            border: 1px solid var(--blue-text);
+        }
+        .toast svg { flex-shrink: 0; width: 16px; height: 16px; }
+
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(1rem); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toast-out {
+            from { opacity: 1; transform: translateY(0); }
+            to   { opacity: 0; transform: translateY(1rem); }
+        }
+
         @media (max-width: 600px) {
             .container { padding: 0 0.75rem 1.5rem; }
             .card { padding: 1.25rem; }
             header { padding: 1rem 0 1rem; }
             .logo-icon { width: 30px; height: 30px; }
             .logo-text { font-size: 1.3rem; }
+            .theme-toggle { top: 0.75rem; transform: none; }
+            .toast-container { left: 0.75rem; right: 0.75rem; bottom: 0.75rem; }
+            .toast { max-width: 100%; }
         }
 
         {% block extra_styles %}{% endblock %}
@@ -192,11 +334,55 @@
                 <span class="logo-text">Vox<span>scribe</span></span>
             </a>
             <p>Audio transcription powered by AI</p>
+            <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode" type="button">
+                <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 0 1 11.21 3 7 7 0 1 0 21 12.79z"/>
+                </svg>
+                <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+            </button>
         </header>
         <main>
             {% block content %}{% endblock %}
         </main>
     </div>
+    <div class="toast-container" id="toast-container"></div>
+    <script>
+        /* ── Theme Toggle ── */
+        (function() {
+            var toggle = document.getElementById('theme-toggle');
+            toggle.addEventListener('click', function() {
+                var html = document.documentElement;
+                var current = html.getAttribute('data-theme');
+                var next = current === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', next);
+                localStorage.setItem('voxscribe-theme', next);
+            });
+        })();
+
+        /* ── Toast System ── */
+        function showToast(message, type) {
+            type = type || 'info';
+            var container = document.getElementById('toast-container');
+            var toast = document.createElement('div');
+            toast.className = 'toast toast-' + type;
+
+            var icons = {
+                success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>',
+                error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+                info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+            };
+
+            toast.innerHTML = (icons[type] || icons.info) + '<span>' + message + '</span>';
+            container.appendChild(toast);
+
+            setTimeout(function() {
+                toast.classList.add('toast-out');
+                setTimeout(function() { toast.remove(); }, 250);
+            }, 3500);
+        }
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

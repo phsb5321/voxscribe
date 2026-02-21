@@ -121,6 +121,9 @@
     font-weight: 700;
     color: var(--navy-700);
     margin-bottom: 0.65rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 .result-text {
     background: var(--slate-50);
@@ -134,6 +137,35 @@
     overflow-y: auto;
     color: var(--navy-900);
     max-width: 72ch;
+    transition: max-height 0.3s ease;
+    position: relative;
+}
+.result-text.expanded {
+    max-height: none;
+}
+.expand-toggle {
+    background: none;
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-sm);
+    padding: 0.25rem 0.6rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--slate-500);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: color 0.2s, border-color 0.2s;
+}
+.expand-toggle:hover {
+    color: var(--navy-700);
+    border-color: var(--navy-700);
+}
+.expand-toggle svg {
+    transition: transform 0.2s;
+}
+.expand-toggle.is-expanded svg {
+    transform: rotate(180deg);
 }
 .result-actions {
     display: flex;
@@ -244,7 +276,7 @@
 
     <!-- Failed State -->
     {% if job.status == 'FAILED' and job.error_message %}
-    <div class="error-card">
+    <div class="error-card" id="error-card">
         <div class="error-card-title">Transcription Failed</div>
         <div class="error-card-msg">{{ job.error_message }}</div>
     </div>
@@ -252,7 +284,7 @@
 
     <!-- Completed Result -->
     {% if result %}
-    <div class="result-section">
+    <div class="result-section" id="result-section">
         <div class="word-count-bar" id="word-count-bar">
             <span class="wc-item"><span class="wc-val" id="word-count">—</span> words</span>
             <span class="wc-sep">&middot;</span>
@@ -264,7 +296,13 @@
             <span class="wc-sep">&middot;</span>
             <span class="wc-item">{{ "%.1f"|format(result.processing_duration_seconds) }}s processing</span>
         </div>
-        <div class="result-label">Transcription</div>
+        <div class="result-label">
+            <span>Transcription</span>
+            <button class="expand-toggle" id="expand-toggle" onclick="toggleExpand()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                <span id="expand-label">Expand</span>
+            </button>
+        </div>
         <div class="result-text" id="result-text">{{ result.full_text }}</div>
         <div class="result-actions">
             <button class="btn btn-primary" id="copy-btn" onclick="copyText()">
@@ -280,9 +318,13 @@
     </div>
     {% endif %}
 
-    <div class="page-actions">
+    <div class="page-actions" id="page-actions">
         {% if job.status == 'FAILED' %}
-        <a href="/" class="btn btn-primary">
+        <button class="btn btn-primary" id="retry-btn" onclick="retryJob()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Retry Transcription
+        </button>
+        <a href="/" class="btn btn-secondary">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
             Upload Another File
         </a>
@@ -296,7 +338,7 @@
 {% block extra_scripts %}
 <script>
 (function() {
-    // Word count
+    // ── Word count ──
     var resultEl = document.getElementById('result-text');
     var wcEl = document.getElementById('word-count');
     if (resultEl && wcEl) {
@@ -304,8 +346,29 @@
         var count = text ? text.split(/\s+/).length : 0;
         wcEl.textContent = count.toLocaleString();
     }
+
+    // ── Auto-hide expand toggle if content fits ──
+    var toggle = document.getElementById('expand-toggle');
+    if (resultEl && toggle) {
+        if (resultEl.scrollHeight <= resultEl.clientHeight + 2) {
+            toggle.style.display = 'none';
+        }
+    }
 })();
 
+// ── Expand / Collapse ──
+function toggleExpand() {
+    var el = document.getElementById('result-text');
+    var btn = document.getElementById('expand-toggle');
+    var label = document.getElementById('expand-label');
+    if (!el || !btn) return;
+
+    var expanded = el.classList.toggle('expanded');
+    btn.classList.toggle('is-expanded', expanded);
+    label.textContent = expanded ? 'Collapse' : 'Expand';
+}
+
+// ── Copy to Clipboard ──
 function copyText() {
     var text = document.getElementById('result-text').textContent;
     navigator.clipboard.writeText(text).then(function() {
@@ -315,7 +378,112 @@ function copyText() {
     });
 }
 
-// SSE progress updates
+// ── Retry Job ──
+function retryJob() {
+    var btn = document.getElementById('retry-btn');
+    if (!btn) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Retrying...';
+
+    var jobId = '{{ job.job_id }}';
+    fetch('/api/jobs/' + jobId + '/retry', { method: 'POST' })
+        .then(function(resp) {
+            if (!resp.ok) {
+                return resp.json().then(function(data) {
+                    throw new Error(data.detail || 'Retry failed');
+                });
+            }
+            return resp.json();
+        })
+        .then(function(data) {
+            if (typeof showToast === 'function') {
+                showToast('Job queued for retry (attempt ' + data.retry_count + '/3)', 'success');
+            }
+            // Re-enable SSE-like tracking: reload the page to get fresh SSE connection
+            setTimeout(function() { location.reload(); }, 800);
+        })
+        .catch(function(err) {
+            if (typeof showToast === 'function') {
+                showToast(err.message, 'error');
+            } else {
+                alert(err.message);
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Retry Transcription';
+        });
+}
+
+// ── Smooth SSE Completion ──
+// Instead of location.reload(), fetch result from API and inject into DOM
+function buildResultSection(result, jobId) {
+    var text = result.full_text || '';
+    var words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    var processingTime = (result.processing_duration_seconds || 0).toFixed(1);
+    var engineName = result.engine_name || '';
+
+    // Build word count bar
+    var wcHtml = '<span class="wc-item"><span class="wc-val">' + words.toLocaleString() + '</span> words</span>';
+    wcHtml += '<span class="wc-sep">&middot;</span>';
+    wcHtml += '<span class="wc-item">' + engineName + '</span>';
+    wcHtml += '<span class="wc-sep">&middot;</span>';
+    wcHtml += '<span class="wc-item">' + processingTime + 's processing</span>';
+
+    var html = '';
+    html += '<div class="word-count-bar" id="word-count-bar">' + wcHtml + '</div>';
+    html += '<div class="result-label"><span>Transcription</span>';
+    html += '<button class="expand-toggle" id="expand-toggle" onclick="toggleExpand()">';
+    html += '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    html += '<span id="expand-label">Expand</span></button></div>';
+    html += '<div class="result-text" id="result-text">' + escapeHtml(text) + '</div>';
+    html += '<div class="result-actions">';
+    html += '<button class="btn btn-primary" id="copy-btn" onclick="copyText()">';
+    html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy to Clipboard</button>';
+    html += '<a class="btn btn-secondary" href="/api/jobs/' + jobId + '/result/download">';
+    html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download TXT</a>';
+    html += '<span class="copy-feedback" id="copy-feedback">Copied!</span>';
+    html += '</div>';
+
+    return html;
+}
+
+function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+
+function showErrorCard(message) {
+    // Remove existing error card if any
+    var existing = document.getElementById('error-card');
+    if (existing) existing.remove();
+
+    var card = document.createElement('div');
+    card.className = 'error-card';
+    card.id = 'error-card';
+    card.innerHTML = '<div class="error-card-title">Transcription Failed</div><div class="error-card-msg">' + escapeHtml(message) + '</div>';
+
+    var metaGrid = document.querySelector('.meta-grid');
+    if (metaGrid) {
+        metaGrid.parentNode.insertBefore(card, metaGrid.nextSibling);
+    }
+}
+
+function updatePageActionsForFailed(jobId) {
+    var actions = document.getElementById('page-actions');
+    if (!actions) return;
+    actions.innerHTML = '<button class="btn btn-primary" id="retry-btn" onclick="retryJob()">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Retry Transcription</button>' +
+        '<a href="/" class="btn btn-secondary">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg> Upload Another File</a>';
+}
+
+function updatePageActionsForCompleted() {
+    var actions = document.getElementById('page-actions');
+    if (!actions) return;
+    actions.innerHTML = '<a href="/" class="btn btn-secondary">Back to Upload</a>';
+}
+
 document.body.addEventListener('sse:status', function(evt) {
     try {
         var data = JSON.parse(evt.detail.data);
@@ -324,6 +492,7 @@ document.body.addEventListener('sse:status', function(evt) {
         var label = document.getElementById('progress-label');
         var stage = document.getElementById('progress-stage');
         var section = document.getElementById('progress-section');
+        var jobId = '{{ job.job_id }}';
 
         if (badge) {
             badge.textContent = data.status;
@@ -338,9 +507,69 @@ document.body.addEventListener('sse:status', function(evt) {
             else stage.textContent = 'Processing...';
         }
 
-        if (data.status === 'COMPLETED' || data.status === 'FAILED') {
+        if (data.status === 'COMPLETED') {
             if (section) section.style.display = 'none';
-            setTimeout(function() { location.reload(); }, 500);
+
+            // Fetch result from API and inject into DOM
+            fetch('/api/jobs/' + jobId + '/result')
+                .then(function(resp) {
+                    if (!resp.ok) throw new Error('Failed to fetch result');
+                    return resp.json();
+                })
+                .then(function(result) {
+                    // Create result section if not present
+                    var resultSection = document.getElementById('result-section');
+                    if (!resultSection) {
+                        resultSection = document.createElement('div');
+                        resultSection.className = 'result-section';
+                        resultSection.id = 'result-section';
+                        var pageActions = document.getElementById('page-actions');
+                        if (pageActions) {
+                            pageActions.parentNode.insertBefore(resultSection, pageActions);
+                        }
+                    }
+                    resultSection.innerHTML = buildResultSection(result, jobId);
+                    updatePageActionsForCompleted();
+
+                    // Auto-hide expand toggle if content fits
+                    var resultEl = document.getElementById('result-text');
+                    var toggle = document.getElementById('expand-toggle');
+                    if (resultEl && toggle && resultEl.scrollHeight <= resultEl.clientHeight + 2) {
+                        toggle.style.display = 'none';
+                    }
+
+                    if (typeof showToast === 'function') {
+                        showToast('Transcription completed!', 'success');
+                    }
+                })
+                .catch(function() {
+                    // Fallback: reload page if API call fails
+                    location.reload();
+                });
+        }
+
+        if (data.status === 'FAILED') {
+            if (section) section.style.display = 'none';
+
+            // Fetch error details from job status API
+            fetch('/api/jobs/' + jobId)
+                .then(function(resp) {
+                    if (!resp.ok) throw new Error('Failed to fetch status');
+                    return resp.json();
+                })
+                .then(function(jobData) {
+                    if (jobData.error_message) {
+                        showErrorCard(jobData.error_message);
+                    }
+                    updatePageActionsForFailed(jobId);
+
+                    if (typeof showToast === 'function') {
+                        showToast('Transcription failed', 'error');
+                    }
+                })
+                .catch(function() {
+                    location.reload();
+                });
         }
     } catch(e) {}
 });

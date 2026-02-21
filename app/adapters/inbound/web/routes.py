@@ -22,6 +22,8 @@ from app.bootstrap import get_container
 from app.domain.exceptions import (
     FileTooLargeError,
     InvalidAudioFormatError,
+    InvalidStateTransitionError,
+    MaxRetriesExceededError,
 )
 
 logger = logging.getLogger(__name__)
@@ -87,9 +89,9 @@ async def upload_file(file: UploadFile, language: str = "pt-BR"):
 
 
 @router.get("/api/jobs")
-async def list_jobs():
+async def list_jobs(limit: int = 50, offset: int = 0):
     container = get_container()
-    jobs = container.repository.get_all_jobs(limit=50)
+    jobs = container.repository.get_all_jobs(limit=limit, offset=offset)
     result = []
     for job in jobs:
         audio = container.repository.get_audio_file(job.audio_file_id)
@@ -133,6 +135,32 @@ async def delete_all_jobs():
     count = container.repository.delete_all_jobs()
     logger.info(f"Deleted {count} transcription jobs and associated files")
     return {"deleted": count}
+
+
+@router.post("/api/jobs/{job_id}/retry")
+async def retry_job(job_id: UUID):
+    """Retry a failed transcription job."""
+    container = get_container()
+
+    job = container.repository.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    try:
+        job.retry()
+        container.repository.save_job(job)
+        container.queue.enqueue(job.id)
+    except MaxRetriesExceededError:
+        raise HTTPException(status_code=409, detail="Maximum retries exceeded")
+    except InvalidStateTransitionError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+    logger.info(f"Retrying job {job_id} (attempt {job.retry_count}/3)")
+    return {
+        "job_id": str(job.id),
+        "status": job.status.value,
+        "retry_count": job.retry_count,
+    }
 
 
 @router.get("/api/jobs/{job_id}", response_model=JobStatusResponse)
