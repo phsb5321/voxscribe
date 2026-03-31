@@ -43,9 +43,7 @@ class YtDlpMediaDownloader(MediaDownloaderPort):
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
                 if info is None:
-                    raise DownloadError(
-                        "Failed to extract information from the URL."
-                    )
+                    raise DownloadError("Failed to extract information from the URL.")
 
                 video_id = info.get("id", "unknown")
                 title = info.get("title")
@@ -59,9 +57,7 @@ class YtDlpMediaDownloader(MediaDownloaderPort):
                     downloaded_path = base + ".mp3"
 
                 if not os.path.exists(downloaded_path):
-                    raise DownloadError(
-                        "Download completed but audio file not found on disk."
-                    )
+                    raise DownloadError("Download completed but audio file not found on disk.")
 
                 size_bytes = os.path.getsize(downloaded_path)
                 filename = f"reel_{video_id}.mp3"
@@ -80,29 +76,20 @@ class YtDlpMediaDownloader(MediaDownloaderPort):
             if "login" in error_msg or "rate" in error_msg:
                 logger.warning(f"Instagram auth/rate issue for {url}: {e}")
                 raise DownloadError(
-                    "This reel requires authentication or is rate-limited. "
-                    "Ensure cookies are configured."
+                    "This reel requires authentication or is rate-limited. Ensure cookies are configured."
                 ) from e
             elif "not available" in error_msg or "not found" in error_msg:
                 raise DownloadError(
-                    "This reel could not be found. "
-                    "It may be deleted or the URL may be incorrect."
+                    "This reel could not be found. It may be deleted or the URL may be incorrect."
                 ) from e
             elif "private" in error_msg:
-                raise DownloadError(
-                    "This reel is from a private account and cannot be accessed."
-                ) from e
+                raise DownloadError("This reel is from a private account and cannot be accessed.") from e
             else:
                 logger.warning(f"yt-dlp download failed for {url}: {e}")
-                raise DownloadError(
-                    f"Failed to download the reel: {e}"
-                ) from e
+                raise DownloadError(f"Failed to download the reel: {e}") from e
         except Exception as e:
             logger.warning(f"Unexpected error downloading {url}: {e}")
-            raise DownloadError(
-                f"Failed to download the reel due to a network error. "
-                f"Please try again."
-            ) from e
+            raise DownloadError("Failed to download the reel due to a network error. Please try again.") from e
 
     def validate_url(self, url: str) -> bool:
         """Check if URL is a valid Instagram reel URL."""

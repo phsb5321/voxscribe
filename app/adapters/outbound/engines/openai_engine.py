@@ -21,9 +21,7 @@ class OpenAIEngine(TranscriptionEnginePort):
 
                 self._client = OpenAI(api_key=self._api_key)
             except Exception as exc:
-                raise TranscriptionError(
-                    f"Failed to initialize OpenAI client: {exc}"
-                ) from exc
+                raise TranscriptionError(f"Failed to initialize OpenAI client: {exc}") from exc
         return self._client
 
     def transcribe(self, audio_path: str, language: str) -> str:
@@ -39,17 +37,13 @@ class OpenAIEngine(TranscriptionEnginePort):
                 )
 
             text = response.text.strip()
-            logger.info(
-                f"OpenAI transcription completed: {len(text)} chars from {audio_path}"
-            )
+            logger.info(f"OpenAI transcription completed: {len(text)} chars from {audio_path}")
             return text
 
         except TranscriptionError:
             raise
         except Exception as exc:
-            raise TranscriptionError(
-                f"OpenAI transcription failed for {audio_path}: {exc}"
-            ) from exc
+            raise TranscriptionError(f"OpenAI transcription failed for {audio_path}: {exc}") from exc
 
     @property
     def engine_name(self) -> str:

@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class JobStatus(str, Enum):
+class JobStatus(StrEnum):
     PENDING = "PENDING"
     DOWNLOADING = "DOWNLOADING"
     CONVERTING = "CONVERTING"

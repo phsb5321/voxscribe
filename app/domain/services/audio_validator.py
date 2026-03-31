@@ -17,14 +17,10 @@ def validate_audio_file(filename: str, size_bytes: int) -> AudioFormat:
     ext = ext.lower()
 
     if ext not in ALLOWED_EXTENSIONS:
-        raise InvalidAudioFormatError(
-            f"Unsupported format '{ext}'. Accepted: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
-        )
+        raise InvalidAudioFormatError(f"Unsupported format '{ext}'. Accepted: {', '.join(sorted(ALLOWED_EXTENSIONS))}")
 
     if size_bytes > MAX_FILE_SIZE_BYTES:
-        raise FileTooLargeError(
-            f"File size {size_bytes} bytes exceeds maximum {MAX_FILE_SIZE_BYTES} bytes (500 MB)"
-        )
+        raise FileTooLargeError(f"File size {size_bytes} bytes exceeds maximum {MAX_FILE_SIZE_BYTES} bytes (500 MB)")
 
     if size_bytes <= 0:
         raise ValueError("File size must be positive")

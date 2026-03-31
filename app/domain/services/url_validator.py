@@ -6,9 +6,7 @@ _INSTAGRAM_REEL_PATTERN = re.compile(
     r"^https?://(?:www\.)?instagram\.com(?:/[^/?#]+)?/reels?/([A-Za-z0-9_-]+)/?(?:\?.*)?$"
 )
 
-_INSTAGRAM_URL_PATTERN = re.compile(
-    r"^https?://(?:www\.)?instagram\.com(?:/|$)"
-)
+_INSTAGRAM_URL_PATTERN = re.compile(r"^https?://(?:www\.)?instagram\.com(?:/|$)")
 
 
 def validate_instagram_reel_url(url: str) -> bool:

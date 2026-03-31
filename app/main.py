@@ -5,9 +5,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from starlette.templating import Jinja2Templates
 
-from app.bootstrap import bootstrap, get_container
+from app.bootstrap import bootstrap
 
 
 @asynccontextmanager

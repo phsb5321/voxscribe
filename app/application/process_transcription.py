@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import os
 import time
@@ -5,7 +6,7 @@ from uuid import UUID
 
 from app.domain.entities.audio_file import MAX_FILE_SIZE_BYTES
 from app.domain.entities.transcription_result import TranscriptionResult
-from app.domain.exceptions import DownloadError, FileTooLargeError
+from app.domain.exceptions import FileTooLargeError
 from app.domain.services.chunking_strategy import (
     add_overlap,
     compute_chunk_boundaries,
@@ -55,33 +56,24 @@ class ProcessTranscriptionUseCase:
             if audio_file.source_url is not None and (
                 not audio_file.storage_path
                 or not os.path.exists(
-                    self._storage.get_absolute_path(audio_file.storage_path)
-                    if audio_file.storage_path
-                    else ""
+                    self._storage.get_absolute_path(audio_file.storage_path) if audio_file.storage_path else ""
                 )
             ):
                 if self._downloader is None:
-                    raise ValueError(
-                        "Media downloader not configured but job requires URL download"
-                    )
+                    raise ValueError("Media downloader not configured but job requires URL download")
 
                 job.transition_to(JobStatus.DOWNLOADING)
                 self._repository.save_job(job)
                 logger.info(f"Job {job_id}: PENDING → DOWNLOADING")
 
-                result = self._downloader.download_audio(
-                    audio_file.source_url, self._storage.get_absolute_path("")
-                )
+                result = self._downloader.download_audio(audio_file.source_url, self._storage.get_absolute_path(""))
 
                 if result.size_bytes > MAX_FILE_SIZE_BYTES:
                     # Clean up oversized download
-                    try:
+                    with contextlib.suppress(OSError):
                         os.unlink(result.file_path)
-                    except OSError:
-                        pass
                     raise FileTooLargeError(
-                        f"Downloaded file size {result.size_bytes} exceeds "
-                        f"maximum {MAX_FILE_SIZE_BYTES} bytes (500 MB)"
+                        f"Downloaded file size {result.size_bytes} exceeds maximum {MAX_FILE_SIZE_BYTES} bytes (500 MB)"
                     )
 
                 # Store the downloaded file and update audio_file
@@ -94,10 +86,8 @@ class ProcessTranscriptionUseCase:
                 self._repository.create_audio_file(audio_file)
 
                 # Clean up temp download file
-                try:
+                with contextlib.suppress(OSError):
                     os.unlink(result.file_path)
-                except OSError:
-                    pass
 
                 # Re-read to get updated entity
                 audio_file = self._repository.get_audio_file(job.audio_file_id)
@@ -135,9 +125,7 @@ class ProcessTranscriptionUseCase:
 
             # Transcribe — with chunking for long files
             duration_ms = int(duration * 1000)
-            full_text = self._transcribe_audio(
-                job_id, absolute_converted_path, job.language, duration_ms
-            )
+            full_text = self._transcribe_audio(job_id, absolute_converted_path, job.language, duration_ms)
             logger.info(f"Job {job_id}: Transcription complete")
 
             # Create TranscriptionResult entity
@@ -167,13 +155,9 @@ class ProcessTranscriptionUseCase:
                 try:
                     job.retry()
                     self._repository.save_job(job)
-                    logger.info(
-                        f"Job {job_id}: Scheduled retry {job.retry_count}/3"
-                    )
+                    logger.info(f"Job {job_id}: Scheduled retry {job.retry_count}/3")
                 except Exception as retry_error:
-                    logger.error(
-                        f"Job {job_id}: Retry failed: {retry_error}"
-                    )
+                    logger.error(f"Job {job_id}: Retry failed: {retry_error}")
 
     def _transcribe_audio(
         self,
@@ -201,15 +185,13 @@ class ProcessTranscriptionUseCase:
         # Transcribe each chunk
         chunk_texts: list[str] = []
         for i, chunk_path in enumerate(chunk_paths):
-            logger.info(f"Job {job_id}: Transcribing chunk {i+1}/{len(chunk_paths)}")
+            logger.info(f"Job {job_id}: Transcribing chunk {i + 1}/{len(chunk_paths)}")
             text = self._engine.transcribe(chunk_path, language)
             chunk_texts.append(text)
 
             # Clean up temp chunk file
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(chunk_path)
-            except OSError:
-                pass
 
         # Stitch chunk transcriptions together
         return stitch_transcriptions(chunk_texts)

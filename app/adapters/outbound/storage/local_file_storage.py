@@ -1,3 +1,4 @@
+import contextlib
 import os
 import re
 import uuid
@@ -37,10 +38,8 @@ class LocalFileStorage(AudioStoragePort):
     def delete(self, storage_path: str) -> None:
         """Delete audio file from storage. Ignores missing files."""
         full_path = os.path.join(self.base_dir, storage_path)
-        try:
+        with contextlib.suppress(FileNotFoundError):
             os.remove(full_path)
-        except FileNotFoundError:
-            pass
 
     def get_absolute_path(self, storage_path: str) -> str:
         """Return absolute filesystem path for a storage path."""

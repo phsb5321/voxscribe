@@ -1,11 +1,12 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class AudioFormat(str, Enum):
+class AudioFormat(StrEnum):
     MP3 = "MP3"
     WAV = "WAV"
     FLAC = "FLAC"
     OGG = "OGG"
+    M4A = "M4A"
 
     @classmethod
     def from_extension(cls, ext: str) -> "AudioFormat":
@@ -13,11 +14,8 @@ class AudioFormat(str, Enum):
         ext = ext.lstrip(".").upper()
         try:
             return cls(ext)
-        except ValueError:
-            raise ValueError(
-                f"Unsupported audio format: {ext}. "
-                f"Supported: {', '.join(f.value for f in cls)}"
-            )
+        except ValueError as e:
+            raise ValueError(f"Unsupported audio format: {ext}. Supported: {', '.join(f.value for f in cls)}") from e
 
     @property
     def extension(self) -> str:
