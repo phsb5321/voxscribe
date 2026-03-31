@@ -75,11 +75,29 @@ Hexagonal (ports & adapters) architecture with clean dependency inversion.
 - `tests/integration/adapters/` — SQLite repo, file storage, pydub converter (real I/O)
 - `tests/e2e/` — Full API tests via httpx AsyncClient (uses NoOpQueue, no Redis needed)
 
-## Active Technologies
-- Python 3.12, Jinja2 templates, vanilla JavaScript + FastAPI, Jinja2, HTMX 2.0.4 (already loaded via CDN) (001-ui-redesign)
-- SQLite (no changes) (001-ui-redesign)
-- Python 3.12 + FastAPI, yt-dlp (new), pydub, faster-whisper/openai/groq, RQ, Redis, Jinja2 (002-instagram-reel-support)
-- SQLite (existing), local filesystem (existing) (002-instagram-reel-support)
+## Git Workflow
 
-## Recent Changes
-- 001-ui-redesign: Added Python 3.12, Jinja2 templates, vanilla JavaScript + FastAPI, Jinja2, HTMX 2.0.4 (already loaded via CDN)
+- **Simplified Gitflow**: `main` (production) and `develop` (integration)
+- Feature branches: `NNN-feature-name` from `develop`, PR back to `develop`
+- Releases: PR from `develop` to `main` triggers deploy to Dokku
+- **Conventional Commits**: All commits must follow conventional commit format (enforced by commitizen pre-commit hook)
+  - `feat:` new features, `fix:` bug fixes, `chore:` maintenance, `docs:` documentation, `refactor:` refactoring, `test:` tests
+- **Version bumps**: `uv run cz bump` (updates pyproject.toml version + creates git tag)
+
+## CI/CD
+
+- GitHub Actions CI runs lint (ruff) + tests (pytest with coverage) on every push/PR to `develop` and `main`
+- Deploy workflow pushes to Dokku on merge to `main` (requires self-hosted runner on local network)
+- Dokku health check: `CHECKS` file validates `/health` endpoint before completing deploy
+
+## Code Quality
+
+- **Linting**: `uv run ruff check .` — rules: E, F, I, W, UP, B, SIM
+- **Formatting**: `uv run ruff format .` — line length 120
+- **Pre-commit hooks**: commitizen (commit-msg) + ruff (pre-commit)
+- **Coverage**: `uv run pytest tests/ --cov=app --cov-report=term-missing` — minimum 50%
+
+## Active Technologies
+- Python 3.12, FastAPI, Jinja2, vanilla JavaScript, HTMX 2.0.4 (CDN)
+- yt-dlp for Instagram reel downloads
+- SQLite, local filesystem, pydub, faster-whisper/openai/groq, RQ/Redis
