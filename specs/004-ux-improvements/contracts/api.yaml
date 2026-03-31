@@ -1,0 +1,123 @@
+# OpenAPI 3.1 Contract — UX Improvements
+# New endpoints only. Existing endpoints unchanged.
+
+openapi: "3.1.0"
+info:
+  title: Voxscribe API — UX Improvements
+  version: "0.4.0"
+  description: New endpoints for audio playback, subtitle export, and sample demo.
+
+paths:
+  /api/jobs/{job_id}/audio:
+    get:
+      summary: Stream audio file for in-browser playback
+      description: |
+        Serves the original (or converted) audio file with proper Content-Type
+        and Range request support for seeking. Returns the converted WAV if
+        available, otherwise the original upload.
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Full audio file
+          content:
+            audio/wav:
+              schema:
+                type: string
+                format: binary
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        "206":
+          description: Partial content (Range request)
+          headers:
+            Content-Range:
+              schema:
+                type: string
+            Accept-Ranges:
+              schema:
+                type: string
+                enum: [bytes]
+        "404":
+          description: Job or audio file not found
+
+  /api/jobs/{job_id}/result/download/{format}:
+    get:
+      summary: Download transcription in specified format
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [txt, srt, vtt]
+      responses:
+        "200":
+          description: File download
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/plain:
+              schema:
+                type: string
+            application/x-subrip:
+              schema:
+                type: string
+            text/vtt:
+              schema:
+                type: string
+        "404":
+          description: Job not found or not yet completed
+
+  /api/sample:
+    post:
+      summary: Submit bundled sample audio for demo transcription
+      description: |
+        Creates a transcription job using a pre-loaded sample audio file.
+        Used for onboarding — lets first-time users see the full flow
+        without providing their own file.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                language:
+                  type: string
+                  default: "pt-BR"
+      responses:
+        "201":
+          description: Sample job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResponse"
+
+components:
+  schemas:
+    UploadResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: ["PENDING"]
+        redirect_url:
+          type: string

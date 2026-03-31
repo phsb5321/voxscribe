@@ -101,3 +101,8 @@ Hexagonal (ports & adapters) architecture with clean dependency inversion.
 - Python 3.12, FastAPI, Jinja2, vanilla JavaScript, HTMX 2.0.4 (CDN)
 - yt-dlp for Instagram reel downloads
 - SQLite, local filesystem, pydub, faster-whisper/openai/groq, RQ/Redis
+- Python 3.12 + vanilla JavaScript (no build tools) + FastAPI, Jinja2, HTMX 2.0.4 (CDN), wavesurfer.js v7 (CDN, new) (004-ux-improvements)
+- SQLite (existing), local filesystem (existing) (004-ux-improvements)
+
+## Recent Changes
+- 004-ux-improvements: Added Python 3.12 + vanilla JavaScript (no build tools) + FastAPI, Jinja2, HTMX 2.0.4 (CDN), wavesurfer.js v7 (CDN, new)

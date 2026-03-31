@@ -8,7 +8,7 @@ import os
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, UploadFile
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.responses import FileResponse, PlainTextResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from app.adapters.inbound.web.schemas import (
@@ -251,6 +251,116 @@ async def download_result(job_id: UUID):
     return PlainTextResponse(
         content=result.full_text,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/api/jobs/{job_id}/result/download/{fmt}")
+async def download_result_format(job_id: UUID, fmt: str):
+    """Download transcription in TXT, SRT, or VTT format."""
+    if fmt not in ("txt", "srt", "vtt"):
+        raise HTTPException(status_code=400, detail=f"Unsupported format: {fmt}. Use txt, srt, or vtt.")
+
+    container = get_container()
+    result = container.get_job_status.get_result(job_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Job not found or not yet completed")
+
+    job = container.get_job_status.execute(job_id)
+    base = "transcription"
+    duration = 0.0
+    if job and job.audio_file:
+        base = os.path.splitext(job.audio_file.original_filename)[0]
+        duration = job.audio_file.duration_seconds or 0.0
+
+    if fmt == "txt":
+        return PlainTextResponse(
+            content=result.full_text,
+            headers={"Content-Disposition": f'attachment; filename="{base}.txt"'},
+        )
+
+    from app.domain.services.subtitle_generator import generate_srt, generate_vtt
+
+    if fmt == "srt":
+        content = generate_srt(result.full_text, duration)
+        return Response(
+            content=content,
+            media_type="application/x-subrip",
+            headers={"Content-Disposition": f'attachment; filename="{base}.srt"'},
+        )
+
+    content = generate_vtt(result.full_text, duration)
+    return Response(
+        content=content,
+        media_type="text/vtt",
+        headers={"Content-Disposition": f'attachment; filename="{base}.vtt"'},
+    )
+
+
+@router.get("/api/jobs/{job_id}/audio")
+async def stream_audio(job_id: UUID):
+    """Stream audio file for in-browser playback with Range request support."""
+    container = get_container()
+
+    job = container.repository.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    audio = container.repository.get_audio_file(job.audio_file_id)
+    if audio is None:
+        raise HTTPException(status_code=404, detail="Audio file not found")
+
+    # Prefer converted WAV (better for playback), fall back to original
+    path = audio.converted_path or audio.storage_path
+    if not path:
+        raise HTTPException(status_code=404, detail="Audio file not available")
+
+    absolute_path = container.storage.get_absolute_path(path)
+    if not os.path.exists(absolute_path):
+        raise HTTPException(status_code=404, detail="Audio file not found on disk")
+
+    # Determine content type
+    ext = os.path.splitext(absolute_path)[1].lower()
+    content_types = {
+        ".wav": "audio/wav",
+        ".mp3": "audio/mpeg",
+        ".ogg": "audio/ogg",
+        ".flac": "audio/flac",
+        ".m4a": "audio/mp4",
+    }
+    media_type = content_types.get(ext, "application/octet-stream")
+
+    return FileResponse(absolute_path, media_type=media_type, filename=os.path.basename(absolute_path))
+
+
+@router.post("/api/sample", status_code=201, response_model=UploadResponse)
+async def submit_sample(language: str = "pt-BR"):
+    """Submit the bundled sample audio for demo transcription."""
+    base = os.path.dirname(__file__)
+    sample_path = os.path.normpath(os.path.join(base, "..", "..", "..", "..", "static", "sample", "sample-pt-br.wav"))
+
+    if not os.path.exists(sample_path):
+        raise HTTPException(status_code=503, detail="Sample audio not available")
+
+    with open(sample_path, "rb") as f:
+        file_data = f.read()
+
+    container = get_container()
+
+    try:
+        request = SubmitTranscriptionRequest(
+            filename="sample-pt-br.wav",
+            file_data=file_data,
+            language=language,
+        )
+        response = container.submit_transcription.execute(request)
+    except Exception as e:
+        logger.error(f"Sample submission failed: {e}")
+        raise HTTPException(status_code=503, detail="Service unavailable") from e
+
+    return UploadResponse(
+        job_id=response.job_id,
+        status=response.status,
+        redirect_url=response.redirect_url,
     )
 
 

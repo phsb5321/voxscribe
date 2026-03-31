@@ -313,10 +313,28 @@
             .toast { max-width: 100%; }
         }
 
+        .skip-link {
+            position: absolute;
+            left: -9999px;
+            top: 0;
+            z-index: 999;
+            padding: 0.5rem 1rem;
+            background: var(--navy-800);
+            color: var(--white);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border-radius: 0 0 var(--radius-sm) 0;
+        }
+        .skip-link:focus {
+            left: 0;
+        }
+
         {% block extra_styles %}{% endblock %}
     </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
     <div class="container">
         <header>
             <a href="/" class="logo-link">
@@ -334,7 +352,7 @@
                 <span class="logo-text">Vox<span>scribe</span></span>
             </a>
             <p>Audio transcription powered by AI</p>
-            <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode" type="button">
+            <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode" type="button" aria-label="Toggle dark mode" aria-pressed="false">
                 <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 12.79A9 9 0 0 1 11.21 3 7 7 0 1 0 21 12.79z"/>
                 </svg>
@@ -343,7 +361,7 @@
                 </svg>
             </button>
         </header>
-        <main>
+        <main id="main-content">
             {% block content %}{% endblock %}
         </main>
     </div>
@@ -351,13 +369,14 @@
     <script>
         /* ── Theme Toggle ── */
         (function() {
-            var toggle = document.getElementById('theme-toggle');
-            toggle.addEventListener('click', function() {
+            var btn = document.getElementById('theme-toggle');
+            btn.addEventListener('click', function() {
                 var html = document.documentElement;
                 var current = html.getAttribute('data-theme');
-                var next = current === 'dark' ? 'light' : 'dark';
-                html.setAttribute('data-theme', next);
-                localStorage.setItem('voxscribe-theme', next);
+                var newTheme = current === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', newTheme);
+                localStorage.setItem('voxscribe-theme', newTheme);
+                btn.setAttribute('aria-pressed', newTheme === 'dark' ? 'true' : 'false');
             });
         })();
 

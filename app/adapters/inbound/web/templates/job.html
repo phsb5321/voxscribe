@@ -212,12 +212,82 @@
     gap: 0.6rem;
 }
 
+/* ── Audio Player ── */
+.audio-player-section {
+    margin-bottom: 1.25rem;
+}
+.player-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.play-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+}
+.player-time {
+    font-size: 0.82rem;
+    color: var(--slate-500);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    min-width: 80px;
+    text-align: right;
+}
+.speed-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.65rem;
+    flex-wrap: wrap;
+}
+.speed-label {
+    font-size: 0.78rem;
+    color: var(--slate-500);
+    font-weight: 600;
+    margin-right: 0.25rem;
+}
+.speed-btn {
+    padding: 0.2rem 0.5rem;
+    border: 1.5px solid var(--slate-200);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--slate-500);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.speed-btn:hover { color: var(--navy-700); border-color: var(--navy-700); }
+.speed-btn.active {
+    background: var(--navy-800);
+    color: var(--white);
+    border-color: var(--navy-800);
+}
+
+/* ── Export Group ── */
+.export-group {
+    display: flex;
+    gap: 0.35rem;
+}
+.export-btn {
+    padding: 0.4rem 0.7rem !important;
+    font-size: 0.82rem !important;
+}
+
 /* ── Responsive ── */
 @media (max-width: 600px) {
     .meta-grid { grid-template-columns: 1fr; gap: 0.5rem; }
     .result-text { font-size: 0.95rem; padding: 1rem; max-width: 100%; }
     .job-header h2 { font-size: 1rem; }
     .word-count-bar { font-size: 0.75rem; gap: 0.5rem; }
+    .player-controls { flex-wrap: wrap; }
+    .player-time { width: 100%; text-align: center; min-width: auto; }
 }
 {% endblock %}
 
@@ -233,7 +303,7 @@
 
     <div class="job-header">
         <h2>{{ job.audio_file.original_filename if job.audio_file else 'Processing...' }}</h2>
-        <span class="status-badge status-{{ job.status }}" id="status-badge">{{ job.status }}</span>
+        <span class="status-badge status-{{ job.status }}" id="status-badge" role="status" aria-live="assertive">{{ job.status }}</span>
     </div>
 
     <div id="sse-target">
@@ -247,12 +317,12 @@
             <div class="progress-bar-fill" id="progress-fill" style="width: {{ job.progress_percent }}%"></div>
         </div>
         <div class="progress-info">
-            <span class="progress-stage" id="progress-stage">
-                {% if job.status == 'DOWNLOADING' %}Downloading reel audio...
-                {% elif job.status == 'CONVERTING' %}Converting audio...
-                {% elif job.status == 'TRANSCRIBING' %}Transcribing...
-                {% elif job.status == 'PENDING' %}Waiting in queue...
-                {% else %}Processing...{% endif %}
+            <span class="progress-stage" id="progress-stage" aria-live="polite" role="status">
+                {% if job.status == 'DOWNLOADING' %}Downloading audio from URL...
+                {% elif job.status == 'CONVERTING' %}Optimizing audio for transcription...
+                {% elif job.status == 'TRANSCRIBING' %}AI is converting speech to text...
+                {% elif job.status == 'PENDING' %}Waiting in queue — your file is next
+                {% else %}Processing your audio...{% endif %}
             </span>
             <span class="progress-pct" id="progress-label">{{ job.progress_percent }}%</span>
         </div>
@@ -288,6 +358,31 @@
     </div>
     {% endif %}
 
+    <!-- Audio Player -->
+    {% if result %}
+    <div class="card audio-player-section" id="audio-player-section">
+        <div class="player-controls">
+            <button class="btn btn-primary play-btn" id="play-btn" onclick="togglePlay()" aria-label="Play or pause audio">
+                <svg id="play-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+            <div id="waveform" style="flex:1;min-width:0;"></div>
+            <span class="player-time" id="player-time">0:00 / 0:00</span>
+        </div>
+        <div class="speed-controls" id="speed-controls">
+            <span class="speed-label">Speed:</span>
+            <button class="speed-btn" data-speed="0.5">0.5x</button>
+            <button class="speed-btn" data-speed="0.75">0.75x</button>
+            <button class="speed-btn active" data-speed="1">1x</button>
+            <button class="speed-btn" data-speed="1.25">1.25x</button>
+            <button class="speed-btn" data-speed="1.5">1.5x</button>
+            <button class="speed-btn" data-speed="2">2x</button>
+        </div>
+        <audio id="audio-fallback" controls style="display:none;width:100%;margin-top:0.5rem;">
+            <source src="/api/jobs/{{ job.job_id }}/audio">
+        </audio>
+    </div>
+    {% endif %}
+
     <!-- Completed Result -->
     {% if result %}
     <div class="result-section" id="result-section">
@@ -304,7 +399,7 @@
         </div>
         <div class="result-label">
             <span>Transcription</span>
-            <button class="expand-toggle" id="expand-toggle" onclick="toggleExpand()">
+            <button class="expand-toggle" id="expand-toggle" onclick="toggleExpand()" aria-expanded="false" aria-controls="result-text">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                 <span id="expand-label">Expand</span>
             </button>
@@ -315,11 +410,21 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 Copy to Clipboard
             </button>
-            <a class="btn btn-secondary" href="/api/jobs/{{ job.job_id }}/result/download">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Download TXT
-            </a>
-            <span class="copy-feedback" id="copy-feedback">Copied!</span>
+            <div class="export-group">
+                <a class="btn btn-secondary export-btn" href="/api/jobs/{{ job.job_id }}/result/download/txt" title="Plain text">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    TXT
+                </a>
+                <a class="btn btn-secondary export-btn" href="/api/jobs/{{ job.job_id }}/result/download/srt" title="Subtitles (SubRip)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    SRT
+                </a>
+                <a class="btn btn-secondary export-btn" href="/api/jobs/{{ job.job_id }}/result/download/vtt" title="Web subtitles (WebVTT)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    VTT
+                </a>
+            </div>
+            <span class="copy-feedback" id="copy-feedback" aria-live="polite">Copied!</span>
         </div>
     </div>
     {% endif %}
@@ -342,6 +447,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="https://unpkg.com/wavesurfer.js@7"></script>
 <script>
 (function() {
     // ── Word count ──
@@ -371,6 +477,7 @@ function toggleExpand() {
 
     var expanded = el.classList.toggle('expanded');
     btn.classList.toggle('is-expanded', expanded);
+    btn.setAttribute('aria-expanded', expanded);
     label.textContent = expanded ? 'Collapse' : 'Expand';
 }
 
@@ -507,11 +614,11 @@ document.body.addEventListener('sse:status', function(evt) {
         if (fill) fill.style.width = data.progress_percent + '%';
         if (label) label.textContent = data.progress_percent + '%';
         if (stage) {
-            if (data.status === 'DOWNLOADING') stage.textContent = 'Downloading reel audio...';
-            else if (data.status === 'CONVERTING') stage.textContent = 'Converting audio...';
-            else if (data.status === 'TRANSCRIBING') stage.textContent = 'Transcribing...';
-            else if (data.status === 'PENDING') stage.textContent = 'Waiting in queue...';
-            else stage.textContent = 'Processing...';
+            if (data.status === 'DOWNLOADING') stage.textContent = 'Downloading audio from URL...';
+            else if (data.status === 'CONVERTING') stage.textContent = 'Optimizing audio for transcription...';
+            else if (data.status === 'TRANSCRIBING') stage.textContent = 'AI is converting speech to text...';
+            else if (data.status === 'PENDING') stage.textContent = 'Waiting in queue — your file is next';
+            else stage.textContent = 'Processing your audio...';
         }
 
         if (data.status === 'COMPLETED') {
@@ -580,5 +687,89 @@ document.body.addEventListener('sse:status', function(evt) {
         }
     } catch(e) {}
 });
+
+// ── Audio Player (wavesurfer.js) ──
+var playerSection = document.getElementById('audio-player-section');
+if (playerSection && typeof WaveSurfer !== 'undefined') {
+    var ws = WaveSurfer.create({
+        container: '#waveform',
+        url: '/api/jobs/{{ job.job_id }}/audio',
+        waveColor: getComputedStyle(document.documentElement).getPropertyValue('--slate-400').trim() || '#94a3b8',
+        progressColor: getComputedStyle(document.documentElement).getPropertyValue('--navy-800').trim() || '#0f3460',
+        height: 48,
+        barWidth: 2,
+        barGap: 1,
+        cursorWidth: 1,
+        cursorColor: getComputedStyle(document.documentElement).getPropertyValue('--teal-500').trim() || '#38b2ac',
+    });
+
+    var playBtn = document.getElementById('play-btn');
+    var playIcon = document.getElementById('play-icon');
+    var timeDisplay = document.getElementById('player-time');
+
+    function formatTime(s) {
+        if (isNaN(s)) return '0:00';
+        var m = Math.floor(s / 60);
+        var sec = Math.floor(s % 60);
+        return m + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+
+    ws.on('ready', function() {
+        timeDisplay.textContent = '0:00 / ' + formatTime(ws.getDuration());
+    });
+    ws.on('timeupdate', function(t) {
+        timeDisplay.textContent = formatTime(t) + ' / ' + formatTime(ws.getDuration());
+    });
+    ws.on('play', function() {
+        var pauseSvg = '<rect x="6" y="4" width="4" height="16" fill="currentColor"/>';
+        pauseSvg += '<rect x="14" y="4" width="4" height="16" fill="currentColor"/>';
+        playIcon.textContent = '';
+        playIcon.insertAdjacentHTML('afterbegin', pauseSvg);
+    });
+    ws.on('pause', function() {
+        var playSvg = '<polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>';
+        playIcon.textContent = '';
+        playIcon.insertAdjacentHTML('afterbegin', playSvg);
+    });
+    ws.on('error', function() {
+        // Fallback to basic audio element
+        document.getElementById('waveform').style.display = 'none';
+        document.getElementById('audio-fallback').style.display = 'block';
+        playBtn.style.display = 'none';
+        timeDisplay.style.display = 'none';
+        document.getElementById('speed-controls').style.display = 'none';
+    });
+
+    // Speed controls
+    document.getElementById('speed-controls').addEventListener('click', function(e) {
+        var btn = e.target.closest('.speed-btn');
+        if (!btn) return;
+        var speed = parseFloat(btn.getAttribute('data-speed'));
+        ws.setPlaybackRate(speed);
+        document.querySelectorAll('.speed-btn').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        sessionStorage.setItem('voxscribe-speed', speed);
+    });
+
+    // Restore saved speed
+    var savedSpeed = sessionStorage.getItem('voxscribe-speed');
+    if (savedSpeed) {
+        ws.setPlaybackRate(parseFloat(savedSpeed));
+        document.querySelectorAll('.speed-btn').forEach(function(b) {
+            b.classList.toggle('active', b.getAttribute('data-speed') === savedSpeed);
+        });
+    }
+} else if (playerSection) {
+    // wavesurfer.js not loaded - show fallback
+    document.getElementById('waveform').style.display = 'none';
+    document.getElementById('audio-fallback').style.display = 'block';
+    document.getElementById('play-btn').style.display = 'none';
+    document.getElementById('player-time').style.display = 'none';
+    document.getElementById('speed-controls').style.display = 'none';
+}
+
+function togglePlay() {
+    if (typeof ws !== 'undefined' && ws) ws.playPause();
+}
 </script>
 {% endblock %}
