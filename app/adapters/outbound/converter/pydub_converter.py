@@ -1,5 +1,4 @@
 import logging
-import os
 import tempfile
 
 from pydub import AudioSegment
@@ -33,9 +32,7 @@ class PydubAudioConverter(AudioConverterPort):
         """Get audio file duration in seconds."""
         return len(AudioSegment.from_file(audio_path)) / 1000.0
 
-    def detect_silence_boundaries(
-        self, audio_path: str, min_silence_ms: int = 500
-    ) -> list[tuple[int, int]]:
+    def detect_silence_boundaries(self, audio_path: str, min_silence_ms: int = 500) -> list[tuple[int, int]]:
         """Detect non-silent segments. Returns list of (start_ms, end_ms) tuples."""
         audio = AudioSegment.from_file(audio_path)
         return detect_nonsilent(
@@ -44,17 +41,13 @@ class PydubAudioConverter(AudioConverterPort):
             silence_thresh=-40,
         )
 
-    def split_at_boundaries(
-        self, audio_path: str, boundaries: list[tuple[int, int]]
-    ) -> list[str]:
+    def split_at_boundaries(self, audio_path: str, boundaries: list[tuple[int, int]]) -> list[str]:
         """Split audio at given boundaries. Returns list of chunk file paths."""
         audio = AudioSegment.from_file(audio_path)
         chunk_paths = []
         for start_ms, end_ms in boundaries:
             chunk = audio[start_ms:end_ms]
-            tmp = tempfile.NamedTemporaryFile(
-                suffix=".wav", delete=False
-            )
+            tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
             tmp.close()
             chunk.export(tmp.name, format="wav")
             chunk_paths.append(tmp.name)

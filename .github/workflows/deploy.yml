@@ -1,0 +1,20 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Deploy to Dokku
+        env:
+          DOKKU_HOST: "192.168.1.184"
+        run: |
+          git remote add dokku "ssh://dokku@${DOKKU_HOST}/voxscribe" 2>/dev/null || true
+          git push dokku main --force

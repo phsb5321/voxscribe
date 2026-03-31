@@ -56,9 +56,7 @@ class FasterWhisperEngine(TranscriptionEnginePort):
         except TranscriptionError:
             raise
         except Exception as exc:
-            raise TranscriptionError(
-                f"Transcription failed for {audio_path}: {exc}"
-            ) from exc
+            raise TranscriptionError(f"Transcription failed for {audio_path}: {exc}") from exc
 
     @property
     def engine_name(self) -> str:

@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -69,12 +69,10 @@ class SQLiteJobRepository(JobRepositoryPort):
             self._conn.execute(_CREATE_TRANSCRIPTION_JOBS)
             self._conn.execute(_CREATE_TRANSCRIPTION_RESULTS)
             # Add source_url column if not present (migration for existing DBs)
-            try:
-                self._conn.execute(
-                    "ALTER TABLE audio_files ADD COLUMN source_url TEXT"
-                )
-            except sqlite3.OperationalError:
-                pass  # Column already exists
+            import contextlib
+
+            with contextlib.suppress(sqlite3.OperationalError):
+                self._conn.execute("ALTER TABLE audio_files ADD COLUMN source_url TEXT")
 
     # ------------------------------------------------------------------
     # Write operations
@@ -132,9 +130,7 @@ class SQLiteJobRepository(JobRepositoryPort):
     def delete_all_jobs(self) -> int:
         """Delete all jobs, results, and audio file records. Return count of deleted jobs."""
         with self._conn:
-            count = self._conn.execute(
-                "SELECT COUNT(*) FROM transcription_jobs"
-            ).fetchone()[0]
+            count = self._conn.execute("SELECT COUNT(*) FROM transcription_jobs").fetchone()[0]
             self._conn.execute("DELETE FROM transcription_results")
             self._conn.execute("DELETE FROM transcription_jobs")
             self._conn.execute("DELETE FROM audio_files")
@@ -198,9 +194,7 @@ class SQLiteJobRepository(JobRepositoryPort):
 
     def get_all_jobs(self, limit: int = 50, offset: int = 0) -> list[TranscriptionJob]:
         """Get all jobs, ordered by most recent first."""
-        sql = (
-            "SELECT * FROM transcription_jobs ORDER BY created_at DESC LIMIT ? OFFSET ?"
-        )
+        sql = "SELECT * FROM transcription_jobs ORDER BY created_at DESC LIMIT ? OFFSET ?"
         rows = self._conn.execute(sql, (limit, offset)).fetchall()
         return [self._row_to_job(row) for row in rows]
 
@@ -234,7 +228,7 @@ class SQLiteJobRepository(JobRepositoryPort):
             storage_path=row["storage_path"],
             upload_timestamp=datetime.fromisoformat(row["upload_timestamp"]),
             converted_path=row["converted_path"],
-            source_url=row["source_url"] if "source_url" in row.keys() else None,
+            source_url=row["source_url"] if "source_url" in dict(row) else None,
         )
 
     @staticmethod
