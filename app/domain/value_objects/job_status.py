@@ -3,6 +3,7 @@ from enum import Enum
 
 class JobStatus(str, Enum):
     PENDING = "PENDING"
+    DOWNLOADING = "DOWNLOADING"
     CONVERTING = "CONVERTING"
     TRANSCRIBING = "TRANSCRIBING"
     COMPLETED = "COMPLETED"
@@ -13,7 +14,8 @@ class JobStatus(str, Enum):
 
 
 _VALID_TRANSITIONS: dict[JobStatus, list[JobStatus]] = {
-    JobStatus.PENDING: [JobStatus.CONVERTING, JobStatus.FAILED],
+    JobStatus.PENDING: [JobStatus.DOWNLOADING, JobStatus.CONVERTING, JobStatus.FAILED],
+    JobStatus.DOWNLOADING: [JobStatus.CONVERTING, JobStatus.FAILED],
     JobStatus.CONVERTING: [JobStatus.TRANSCRIBING, JobStatus.FAILED],
     JobStatus.TRANSCRIBING: [JobStatus.COMPLETED, JobStatus.FAILED],
     JobStatus.FAILED: [JobStatus.PENDING],  # retry

@@ -124,3 +124,57 @@ class TestAudioFileCreation:
         assert audio_file.duration_seconds == 120.5
         assert audio_file.upload_timestamp is not None
         assert audio_file.converted_path is None
+
+    def test_create_valid_m4a_audio_file(self):
+        audio_file = AudioFile(
+            original_filename="recording.m4a",
+            format=AudioFormat.M4A,
+            size_bytes=4096,
+            storage_path="/uploads/recording.m4a",
+        )
+        assert audio_file.original_filename == "recording.m4a"
+        assert audio_file.format == AudioFormat.M4A
+        assert audio_file.size_bytes == 4096
+        assert audio_file.storage_path == "/uploads/recording.m4a"
+
+    def test_create_audio_file_with_source_url(self):
+        audio_file = AudioFile(
+            original_filename="reel_ABC123.mp3",
+            format=AudioFormat.MP3,
+            size_bytes=0,
+            storage_path="",
+            source_url="https://www.instagram.com/reel/ABC123/",
+        )
+        assert audio_file.source_url == "https://www.instagram.com/reel/ABC123/"
+        assert audio_file.size_bytes == 0
+        assert audio_file.storage_path == ""
+
+    def test_source_url_defaults_to_none(self):
+        audio_file = AudioFile(
+            original_filename="recording.mp3",
+            format=AudioFormat.MP3,
+            size_bytes=1024,
+            storage_path="/uploads/recording.mp3",
+        )
+        assert audio_file.source_url is None
+
+    def test_url_sourced_file_allows_zero_size(self):
+        """URL-sourced files are created as stubs with size=0 at submit time."""
+        audio_file = AudioFile(
+            original_filename="reel_XYZ.mp3",
+            format=AudioFormat.MP3,
+            size_bytes=0,
+            storage_path="",
+            source_url="https://www.instagram.com/reel/XYZ/",
+        )
+        assert audio_file.size_bytes == 0
+
+    def test_non_url_file_still_rejects_zero_size(self):
+        """File uploads (no source_url) must have positive size."""
+        with pytest.raises(ValueError, match="size_bytes must be positive"):
+            AudioFile(
+                original_filename="recording.mp3",
+                format=AudioFormat.MP3,
+                size_bytes=0,
+                storage_path="/uploads/recording.mp3",
+            )

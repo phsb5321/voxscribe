@@ -78,6 +78,8 @@ Hexagonal (ports & adapters) architecture with clean dependency inversion.
 ## Active Technologies
 - Python 3.12, Jinja2 templates, vanilla JavaScript + FastAPI, Jinja2, HTMX 2.0.4 (already loaded via CDN) (001-ui-redesign)
 - SQLite (no changes) (001-ui-redesign)
+- Python 3.12 + FastAPI, yt-dlp (new), pydub, faster-whisper/openai/groq, RQ, Redis, Jinja2 (002-instagram-reel-support)
+- SQLite (existing), local filesystem (existing) (002-instagram-reel-support)
 
 ## Recent Changes
 - 001-ui-redesign: Added Python 3.12, Jinja2 templates, vanilla JavaScript + FastAPI, Jinja2, HTMX 2.0.4 (already loaded via CDN)

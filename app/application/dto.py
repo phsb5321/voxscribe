@@ -11,6 +11,12 @@ class SubmitTranscriptionRequest:
 
 
 @dataclass(frozen=True)
+class SubmitUrlTranscriptionRequest:
+    url: str
+    language: str = "pt-BR"
+
+
+@dataclass(frozen=True)
 class SubmitTranscriptionResponse:
     job_id: UUID
     status: str
@@ -23,6 +29,7 @@ class AudioFileInfo:
     format: str
     size_bytes: int
     duration_seconds: float | None
+    source_url: str | None = None
 
 
 @dataclass(frozen=True)

@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import MagicMock
 
 from app.application.submit_transcription import SubmitTranscriptionUseCase
-from app.application.dto import SubmitTranscriptionRequest
-from app.domain.exceptions import InvalidAudioFormatError, FileTooLargeError
+from app.application.dto import SubmitTranscriptionRequest, SubmitUrlTranscriptionRequest
+from app.domain.exceptions import InvalidAudioFormatError, FileTooLargeError, InvalidUrlError
 
 
 @pytest.fixture
@@ -34,7 +34,9 @@ def use_case(mock_storage, mock_repository, mock_queue):
 
 
 class TestSubmitValidFile:
-    def test_submit_valid_file(self, use_case, mock_storage, mock_repository, mock_queue):
+    def test_submit_valid_file(
+        self, use_case, mock_storage, mock_repository, mock_queue
+    ):
         request = SubmitTranscriptionRequest(
             filename="test.mp3",
             file_data=b"fake_audio",
@@ -60,6 +62,25 @@ class TestSubmitValidFile:
         assert response.status == "PENDING"
         assert response.redirect_url.startswith("/jobs/")
 
+    def test_submit_valid_m4a_file(
+        self, use_case, mock_storage, mock_repository, mock_queue
+    ):
+        mock_storage.store.return_value = "uploads/test.m4a"
+        request = SubmitTranscriptionRequest(
+            filename="test.m4a",
+            file_data=b"fake_audio",
+            language="pt-BR",
+        )
+
+        response = use_case.execute(request)
+
+        mock_storage.store.assert_called_once_with("test.m4a", b"fake_audio")
+        mock_repository.create_audio_file.assert_called_once()
+        mock_repository.save_job.assert_called_once()
+        mock_queue.enqueue.assert_called_once()
+        assert response.job_id is not None
+        assert response.status == "PENDING"
+
 
 class TestSubmitInvalidFormat:
     def test_submit_invalid_format(self, use_case):
@@ -83,3 +104,44 @@ class TestSubmitFileTooLarge:
 
         with pytest.raises(FileTooLargeError):
             use_case.execute(request)
+
+
+class TestSubmitFromUrl:
+    def test_submit_valid_reel_url(
+        self, use_case, mock_repository, mock_queue
+    ):
+        request = SubmitUrlTranscriptionRequest(
+            url="https://www.instagram.com/reel/ABC123/",
+            language="pt-BR",
+        )
+
+        response = use_case.execute_from_url(request)
+
+        mock_repository.create_audio_file.assert_called_once()
+        audio_file = mock_repository.create_audio_file.call_args[0][0]
+        assert audio_file.source_url == "https://www.instagram.com/reel/ABC123/"
+        assert audio_file.original_filename == "reel_ABC123.mp3"
+        assert audio_file.size_bytes == 0
+
+        mock_repository.save_job.assert_called_once()
+        mock_queue.enqueue.assert_called_once()
+
+        assert response.job_id is not None
+        assert response.status == "PENDING"
+        assert response.redirect_url.startswith("/jobs/")
+
+    def test_submit_invalid_url_raises_error(self, use_case):
+        request = SubmitUrlTranscriptionRequest(
+            url="https://www.youtube.com/watch?v=abc",
+            language="pt-BR",
+        )
+        with pytest.raises(InvalidUrlError, match="Invalid URL"):
+            use_case.execute_from_url(request)
+
+    def test_submit_instagram_non_reel_url_raises_specific_error(self, use_case):
+        request = SubmitUrlTranscriptionRequest(
+            url="https://www.instagram.com/p/ABC123/",
+            language="pt-BR",
+        )
+        with pytest.raises(InvalidUrlError, match="not a reel"):
+            use_case.execute_from_url(request)

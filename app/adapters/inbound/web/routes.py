@@ -16,13 +16,16 @@ from app.adapters.inbound.web.schemas import (
     JobStatusResponse,
     TranscriptionResultResponse,
     UploadResponse,
+    UrlUploadRequest,
 )
-from app.application.dto import SubmitTranscriptionRequest
+from app.application.dto import SubmitTranscriptionRequest, SubmitUrlTranscriptionRequest
 from app.bootstrap import get_container
 from app.domain.exceptions import (
+    DomainError,
     FileTooLargeError,
     InvalidAudioFormatError,
     InvalidStateTransitionError,
+    InvalidUrlError,
     MaxRetriesExceededError,
 )
 
@@ -88,6 +91,31 @@ async def upload_file(file: UploadFile, language: str = "pt-BR"):
     )
 
 
+@router.post("/api/upload-url", status_code=201, response_model=UploadResponse)
+async def upload_from_url(body: UrlUploadRequest):
+    container = get_container()
+
+    try:
+        request = SubmitUrlTranscriptionRequest(
+            url=body.url,
+            language=body.language,
+        )
+        response = container.submit_transcription.execute_from_url(request)
+    except InvalidUrlError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except DomainError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"URL upload failed: {e}")
+        raise HTTPException(status_code=503, detail="Service unavailable")
+
+    return UploadResponse(
+        job_id=response.job_id,
+        status=response.status,
+        redirect_url=response.redirect_url,
+    )
+
+
 @router.get("/api/jobs")
 async def list_jobs(limit: int = 50, offset: int = 0):
     container = get_container()
@@ -108,6 +136,7 @@ async def list_jobs(limit: int = 50, offset: int = 0):
                 "size_bytes": audio.size_bytes if audio else 0,
                 "duration_seconds": audio.duration_seconds if audio else None,
                 "format": audio.format.value if audio else None,
+                "source_url": audio.source_url if audio else None,
             }
         )
     return result
@@ -177,6 +206,7 @@ async def get_job_status(job_id: UUID):
             format=job.audio_file.format,
             size_bytes=job.audio_file.size_bytes,
             duration_seconds=job.audio_file.duration_seconds,
+            source_url=job.audio_file.source_url,
         )
 
     return JobStatusResponse(

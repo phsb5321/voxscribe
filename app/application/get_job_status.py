@@ -21,6 +21,7 @@ class GetJobStatusUseCase:
                 format=audio_file.format.value,
                 size_bytes=audio_file.size_bytes,
                 duration_seconds=audio_file.duration_seconds,
+                source_url=audio_file.source_url,
             )
 
         return JobStatusResponse(

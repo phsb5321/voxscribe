@@ -5,11 +5,15 @@ services:
       - "5000:5000"
     volumes:
       - ./DATA:/app/DATA
+      # Optional: mount Instagram cookies file for reel downloads
+      # - ./cookies.txt:/app/cookies.txt:ro
     environment:
       - TRANSCRIPTION_ENGINE=faster-whisper
       - REDIS_URL=redis://redis:6379
       - DATA_DIR=/app/DATA
       - DATABASE_URL=sqlite:///app/DATA/db.sqlite
+      # Optional: path to Netscape-format cookies.txt for Instagram auth
+      # - INSTAGRAM_COOKIES_FILE=/app/cookies.txt
     depends_on:
       - redis
 
@@ -18,11 +22,15 @@ services:
     command: rq worker --url redis://redis:6379
     volumes:
       - ./DATA:/app/DATA
+      # Optional: mount Instagram cookies file for reel downloads
+      # - ./cookies.txt:/app/cookies.txt:ro
     environment:
       - TRANSCRIPTION_ENGINE=faster-whisper
       - REDIS_URL=redis://redis:6379
       - DATA_DIR=/app/DATA
       - DATABASE_URL=sqlite:///app/DATA/db.sqlite
+      # Optional: path to Netscape-format cookies.txt for Instagram auth
+      # - INSTAGRAM_COOKIES_FILE=/app/cookies.txt
     depends_on:
       - redis
 

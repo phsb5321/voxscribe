@@ -403,11 +403,92 @@
     .filter-tabs { flex-wrap: wrap; }
     .job-row-meta { font-size: 0.72rem; }
 }
+
+/* ── Mode Tabs ── */
+.mode-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+    background: var(--slate-100);
+    border-radius: var(--radius-sm);
+    padding: 0.2rem;
+}
+.mode-tab {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--slate-500);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+.mode-tab:hover { color: var(--navy-700); }
+.mode-tab.active {
+    background: var(--white);
+    color: var(--navy-800);
+    box-shadow: var(--shadow-sm);
+}
+.url-input-wrap {
+    margin-bottom: 1.25rem;
+}
+.url-input-wrap input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1.5px solid var(--slate-200);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    color: var(--navy-900);
+    background: var(--white);
+    transition: border-color 0.15s ease;
+    box-sizing: border-box;
+}
+.url-input-wrap input:focus {
+    outline: none;
+    border-color: var(--navy-800);
+}
+.url-input-wrap input::placeholder {
+    color: var(--slate-400);
+}
+.url-hint {
+    font-size: 0.78rem;
+    color: var(--slate-400);
+    margin-top: 0.35rem;
+}
+.source-url-icon {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.3rem;
+    color: var(--teal-500);
+    vertical-align: middle;
+    flex-shrink: 0;
+}
 {% endblock %}
 
 {% block content %}
 <div class="card upload-card">
+    <div class="mode-tabs" id="mode-tabs">
+        <button type="button" class="mode-tab active" data-mode="file">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+            Upload File
+        </button>
+        <button type="button" class="mode-tab" data-mode="url">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            Paste URL
+        </button>
+    </div>
     <form id="upload-form" enctype="multipart/form-data">
+        <div class="url-input-wrap" id="url-input-wrap" style="display:none;">
+            <input type="text" id="url-input" placeholder="https://www.instagram.com/reel/..." autocomplete="off">
+            <p class="url-hint">Paste an Instagram reel URL to transcribe its audio</p>
+        </div>
         <div class="drop-zone" id="drop-zone">
             <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -416,8 +497,8 @@
             </svg>
             <p class="drop-zone-title">Drop audio files here</p>
             <p class="drop-zone-sub">or click to browse your files</p>
-            <p class="drop-zone-formats">MP3, WAV, FLAC, OGG &middot; Max 500 MB each</p>
-            <input type="file" id="file-input" name="file" accept=".mp3,.wav,.flac,.ogg" multiple hidden>
+            <p class="drop-zone-formats">MP3, WAV, FLAC, OGG, M4A &middot; Max 500 MB each</p>
+            <input type="file" id="file-input" name="file" accept=".mp3,.wav,.flac,.ogg,.m4a" multiple hidden>
         </div>
 
         <div class="file-list" id="file-list"></div>
@@ -506,6 +587,10 @@
     var currentOffset = 0;
     var hasMore = false;
     var refreshTimer = null;
+    var currentMode = 'file';
+    var urlInput = document.getElementById('url-input');
+    var urlInputWrap = document.getElementById('url-input-wrap');
+    var modeTabs = document.getElementById('mode-tabs');
 
     function formatSize(bytes) {
         if (bytes == null || bytes === 0) return '\u2014';
@@ -632,6 +717,33 @@
     form.addEventListener('submit', function(ev) {
         ev.preventDefault();
         clearError();
+
+        if (currentMode === 'url') {
+            var url = urlInput.value.trim();
+            if (!url) return;
+
+            submitBtn.disabled = true;
+            var language = document.getElementById('language').value;
+
+            fetch('/api/upload-url', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url, language: language })
+            })
+            .then(function(r) {
+                if (!r.ok) return r.json().then(function(data) { throw new Error(data.detail || 'Upload failed'); });
+                return r.json();
+            })
+            .then(function(data) {
+                window.location.href = data.redirect_url;
+            })
+            .catch(function(err) {
+                showError(err.message);
+                submitBtn.disabled = false;
+            });
+            return;
+        }
+
         if (selectedFiles.length === 0) return;
 
         var language = document.getElementById('language').value;
@@ -713,7 +825,7 @@
     /* ── History: Filter & Search ── */
 
     function isActiveStatus(status) {
-        return status === 'PENDING' || status === 'CONVERTING' || status === 'TRANSCRIBING';
+        return status === 'PENDING' || status === 'DOWNLOADING' || status === 'CONVERTING' || status === 'TRANSCRIBING';
     }
 
     function hasActiveJobs() {
@@ -788,6 +900,13 @@
             badge.textContent = job.status;
 
             main.appendChild(nameSpan);
+            if (job.source_url) {
+                var urlIcon = document.createElement('span');
+                urlIcon.className = 'source-url-icon';
+                urlIcon.title = job.source_url;
+                urlIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+                main.appendChild(urlIcon);
+            }
             a.appendChild(main);
             a.appendChild(badge);
 
@@ -923,6 +1042,36 @@
             refreshTimer = null;
         }
     }
+
+    /* ── Mode Toggle ── */
+    modeTabs.addEventListener('click', function(e) {
+        var tab = e.target.closest('.mode-tab');
+        if (!tab) return;
+        modeTabs.querySelectorAll('.mode-tab').forEach(function(t) { t.classList.remove('active'); });
+        tab.classList.add('active');
+        currentMode = tab.getAttribute('data-mode');
+
+        if (currentMode === 'url') {
+            dropZone.style.display = 'none';
+            fileList.style.display = 'none';
+            urlInputWrap.style.display = '';
+            submitBtn.textContent = '';
+            submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Transcribe from URL';
+            submitBtn.disabled = !urlInput.value.trim();
+        } else {
+            dropZone.style.display = '';
+            fileList.style.display = '';
+            urlInputWrap.style.display = 'none';
+            submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg> Upload &amp; Transcribe';
+            submitBtn.disabled = selectedFiles.length === 0;
+        }
+    });
+
+    urlInput.addEventListener('input', function() {
+        if (currentMode === 'url') {
+            submitBtn.disabled = !urlInput.value.trim();
+        }
+    });
 
     /* ── Initial Load ── */
     showSkeleton();
