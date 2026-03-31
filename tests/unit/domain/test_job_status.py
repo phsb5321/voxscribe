@@ -1,5 +1,3 @@
-import pytest
-
 from app.domain.value_objects.job_status import JobStatus
 
 

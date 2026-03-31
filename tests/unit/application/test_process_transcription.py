@@ -1,13 +1,14 @@
-import pytest
-from unittest.mock import MagicMock, PropertyMock, call
+from unittest.mock import MagicMock
 from uuid import uuid4
+
+import pytest
 
 from app.application.process_transcription import ProcessTranscriptionUseCase
 from app.domain.entities.audio_file import AudioFile
 from app.domain.entities.transcription_job import TranscriptionJob
+from app.domain.exceptions import TranscriptionError
 from app.domain.value_objects.audio_format import AudioFormat
 from app.domain.value_objects.job_status import JobStatus
-from app.domain.exceptions import TranscriptionError
 
 
 @pytest.fixture

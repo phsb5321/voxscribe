@@ -1,16 +1,15 @@
-import os
 import logging
-from concurrent.futures import ThreadPoolExecutor
-import speech_recognition as sr
-from pydub import AudioSegment
+import os
 import socket
 import time
+from concurrent.futures import ThreadPoolExecutor
+
 import dns.resolver  # Add this to requirements.txt
+import speech_recognition as sr
+from pydub import AudioSegment
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Constants
@@ -70,14 +69,10 @@ class AudioTranscriber:
 
                 with sr.AudioFile(file_path) as source:
                     audio_data = self.recognizer.record(source)
-                    text = self.recognizer.recognize_google(
-                        audio_data, language=LANGUAGE
-                    )
+                    text = self.recognizer.recognize_google(audio_data, language=LANGUAGE)
                     return text
             except sr.RequestError as e:
-                logger.warning(
-                    f"Request error (attempt {attempt + 1}/{MAX_RETRIES}): {e}"
-                )
+                logger.warning(f"Request error (attempt {attempt + 1}/{MAX_RETRIES}): {e}")
                 if attempt < MAX_RETRIES - 1:
                     time.sleep(RETRY_DELAY)
                     continue
@@ -102,11 +97,7 @@ class AudioTranscriber:
 
 def get_audio_files(directory):
     """Get all supported audio files from the specified directory."""
-    return [
-        os.path.join(directory, f)
-        for f in os.listdir(directory)
-        if f.lower().endswith(SUPPORTED_AUDIO_FORMATS)
-    ]
+    return [os.path.join(directory, f) for f in os.listdir(directory) if f.lower().endswith(SUPPORTED_AUDIO_FORMATS)]
 
 
 def main():

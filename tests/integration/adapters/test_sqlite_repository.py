@@ -1,6 +1,7 @@
-import pytest
+from datetime import UTC, datetime
 from uuid import uuid4
-from datetime import datetime, timezone
+
+import pytest
 
 from app.adapters.outbound.persistence.sqlite_repository import SQLiteJobRepository
 from app.domain.entities.audio_file import AudioFile
@@ -22,7 +23,7 @@ def _make_audio_file(**overrides) -> AudioFile:
         format=AudioFormat.MP3,
         size_bytes=1024,
         storage_path="abc123_recording.mp3",
-        upload_timestamp=datetime.now(timezone.utc),
+        upload_timestamp=datetime.now(UTC),
         duration_seconds=12.5,
         converted_path=None,
     )
@@ -37,8 +38,8 @@ def _make_job(audio_file_id=None, **overrides) -> TranscriptionJob:
         status=JobStatus.PENDING,
         language="pt-BR",
         engine_name="whisper",
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
     defaults.update(overrides)
     return TranscriptionJob(**defaults)
@@ -52,14 +53,13 @@ def _make_result(job_id=None, **overrides) -> TranscriptionResult:
         language="pt-BR",
         engine_name="whisper",
         processing_duration_seconds=3.14,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     defaults.update(overrides)
     return TranscriptionResult(**defaults)
 
 
 class TestSQLiteJobRepository:
-
     def test_create_and_get_audio_file(self, repo):
         audio_file = _make_audio_file()
 
@@ -123,22 +123,14 @@ class TestSQLiteJobRepository:
         assert retrieved.full_text == result.full_text
         assert retrieved.language == result.language
         assert retrieved.engine_name == result.engine_name
-        assert retrieved.processing_duration_seconds == pytest.approx(
-            result.processing_duration_seconds
-        )
+        assert retrieved.processing_duration_seconds == pytest.approx(result.processing_duration_seconds)
 
     def test_get_jobs_by_status(self, repo):
         audio_file = _make_audio_file()
         repo.create_audio_file(audio_file)
 
-        pending_jobs = [
-            _make_job(audio_file_id=audio_file.id, status=JobStatus.PENDING)
-            for _ in range(3)
-        ]
-        converting_jobs = [
-            _make_job(audio_file_id=audio_file.id, status=JobStatus.CONVERTING)
-            for _ in range(2)
-        ]
+        pending_jobs = [_make_job(audio_file_id=audio_file.id, status=JobStatus.PENDING) for _ in range(3)]
+        converting_jobs = [_make_job(audio_file_id=audio_file.id, status=JobStatus.CONVERTING) for _ in range(2)]
 
         for job in pending_jobs + converting_jobs:
             repo.save_job(job)

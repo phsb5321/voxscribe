@@ -1,7 +1,7 @@
-import pytest
 import os
 import wave
 
+import pytest
 from pydub import AudioSegment
 
 from app.adapters.outbound.converter.pydub_converter import PydubAudioConverter
@@ -13,7 +13,6 @@ def converter():
 
 
 class TestPydubAudioConverter:
-
     def test_convert_to_wav(self, tmp_path, converter):
         # Create a 1-second silent audio segment and export as MP3
         silence = AudioSegment.silent(duration=1000)

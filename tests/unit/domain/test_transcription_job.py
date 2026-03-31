@@ -1,9 +1,10 @@
-import pytest
 from uuid import uuid4
 
-from app.domain.entities.transcription_job import TranscriptionJob, MAX_RETRIES
-from app.domain.value_objects.job_status import JobStatus
+import pytest
+
+from app.domain.entities.transcription_job import MAX_RETRIES, TranscriptionJob
 from app.domain.exceptions import InvalidStateTransitionError, MaxRetriesExceededError
+from app.domain.value_objects.job_status import JobStatus
 
 
 @pytest.fixture

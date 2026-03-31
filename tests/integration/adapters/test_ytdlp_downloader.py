@@ -34,15 +34,11 @@ class TestYtDlpMediaDownloader:
                 "id": "ABC123",
                 "title": "Test Reel",
             }
-            mock_ydl_class.return_value.__enter__ = MagicMock(
-                return_value=mock_ydl_instance
-            )
+            mock_ydl_class.return_value.__enter__ = MagicMock(return_value=mock_ydl_instance)
             mock_ydl_class.return_value.__exit__ = MagicMock(return_value=False)
 
             downloader = YtDlpMediaDownloader()
-            result = downloader.download_audio(
-                "https://www.instagram.com/reel/ABC123/", tmpdir
-            )
+            result = downloader.download_audio("https://www.instagram.com/reel/ABC123/", tmpdir)
 
             assert result.filename == "reel_ABC123.mp3"
             assert result.title == "Test Reel"
@@ -51,19 +47,13 @@ class TestYtDlpMediaDownloader:
     @patch("yt_dlp.YoutubeDL")
     def test_download_error_reraised_as_domain_error(self, mock_ydl_class):
         mock_ydl_instance = MagicMock()
-        mock_ydl_instance.extract_info.side_effect = yt_dlp.utils.DownloadError(
-            "not available"
-        )
-        mock_ydl_class.return_value.__enter__ = MagicMock(
-            return_value=mock_ydl_instance
-        )
+        mock_ydl_instance.extract_info.side_effect = yt_dlp.utils.DownloadError("not available")
+        mock_ydl_class.return_value.__enter__ = MagicMock(return_value=mock_ydl_instance)
         mock_ydl_class.return_value.__exit__ = MagicMock(return_value=False)
 
         downloader = YtDlpMediaDownloader()
         with pytest.raises(DownloadError, match="could not be found"):
-            downloader.download_audio(
-                "https://www.instagram.com/reel/ABC123/", "/tmp"
-            )
+            downloader.download_audio("https://www.instagram.com/reel/ABC123/", "/tmp")
 
     def test_cookies_file_passed_to_constructor(self):
         downloader = YtDlpMediaDownloader(cookies_file="/path/to/cookies.txt")

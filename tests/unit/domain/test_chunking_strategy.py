@@ -1,8 +1,6 @@
 """Unit tests for chunking strategy service."""
 
 from app.domain.services.chunking_strategy import (
-    CHUNK_DURATION_MAX_MS,
-    CHUNK_DURATION_MIN_MS,
     LONG_FILE_THRESHOLD_MS,
     OVERLAP_MS,
     add_overlap,
@@ -38,7 +36,7 @@ class TestComputeChunkBoundaries:
     def test_splits_at_max_duration(self):
         # Three 6-minute segments: first two form a 12-min block > 10min max
         segments = [
-            (0, 360_000),        # 0-6 min
+            (0, 360_000),  # 0-6 min
             (360_000, 720_000),  # 6-12 min
             (720_000, 1_080_000),  # 12-18 min
         ]
@@ -51,7 +49,7 @@ class TestComputeChunkBoundaries:
     def test_short_segments_grouped_together(self):
         # Two 4-minute segments = 8 min total, under 10 min max
         segments = [
-            (0, 240_000),       # 0-4 min
+            (0, 240_000),  # 0-4 min
             (240_000, 480_000),  # 4-8 min
         ]
         result = compute_chunk_boundaries(segments, 480_000)
@@ -111,10 +109,12 @@ class TestStitchTranscriptions:
         assert result == "Hello world. Good morning."
 
     def test_overlapping_words_deduplicated(self):
-        result = stitch_transcriptions([
-            "The quick brown fox jumps",
-            "fox jumps over the lazy dog",
-        ])
+        result = stitch_transcriptions(
+            [
+                "The quick brown fox jumps",
+                "fox jumps over the lazy dog",
+            ]
+        )
         assert result == "The quick brown fox jumps over the lazy dog"
 
     def test_empty_chunks_skipped(self):
@@ -126,11 +126,13 @@ class TestStitchTranscriptions:
         assert result == "Hello. World."
 
     def test_multiple_chunks_stitched(self):
-        result = stitch_transcriptions([
-            "Part one text here",
-            "text here and part two",
-            "part two continues further",
-        ])
+        result = stitch_transcriptions(
+            [
+                "Part one text here",
+                "text here and part two",
+                "part two continues further",
+            ]
+        )
         assert "Part one" in result
         assert "part two" in result
         assert "continues further" in result

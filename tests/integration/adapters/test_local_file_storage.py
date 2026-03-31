@@ -1,5 +1,6 @@
-import pytest
 import os
+
+import pytest
 
 from app.adapters.outbound.storage.local_file_storage import LocalFileStorage
 from app.domain.exceptions import StorageError
@@ -11,7 +12,6 @@ def storage(tmp_path):
 
 
 class TestLocalFileStorage:
-
     def test_store_and_retrieve(self, storage):
         data = b"fake audio content here"
         storage_path = storage.store("sample.mp3", data)

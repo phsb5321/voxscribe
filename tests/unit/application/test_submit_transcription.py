@@ -1,9 +1,10 @@
-import pytest
 from unittest.mock import MagicMock
 
-from app.application.submit_transcription import SubmitTranscriptionUseCase
+import pytest
+
 from app.application.dto import SubmitTranscriptionRequest, SubmitUrlTranscriptionRequest
-from app.domain.exceptions import InvalidAudioFormatError, FileTooLargeError, InvalidUrlError
+from app.application.submit_transcription import SubmitTranscriptionUseCase
+from app.domain.exceptions import FileTooLargeError, InvalidAudioFormatError, InvalidUrlError
 
 
 @pytest.fixture
@@ -34,9 +35,7 @@ def use_case(mock_storage, mock_repository, mock_queue):
 
 
 class TestSubmitValidFile:
-    def test_submit_valid_file(
-        self, use_case, mock_storage, mock_repository, mock_queue
-    ):
+    def test_submit_valid_file(self, use_case, mock_storage, mock_repository, mock_queue):
         request = SubmitTranscriptionRequest(
             filename="test.mp3",
             file_data=b"fake_audio",
@@ -62,9 +61,7 @@ class TestSubmitValidFile:
         assert response.status == "PENDING"
         assert response.redirect_url.startswith("/jobs/")
 
-    def test_submit_valid_m4a_file(
-        self, use_case, mock_storage, mock_repository, mock_queue
-    ):
+    def test_submit_valid_m4a_file(self, use_case, mock_storage, mock_repository, mock_queue):
         mock_storage.store.return_value = "uploads/test.m4a"
         request = SubmitTranscriptionRequest(
             filename="test.m4a",
@@ -107,9 +104,7 @@ class TestSubmitFileTooLarge:
 
 
 class TestSubmitFromUrl:
-    def test_submit_valid_reel_url(
-        self, use_case, mock_repository, mock_queue
-    ):
+    def test_submit_valid_reel_url(self, use_case, mock_repository, mock_queue):
         request = SubmitUrlTranscriptionRequest(
             url="https://www.instagram.com/reel/ABC123/",
             language="pt-BR",

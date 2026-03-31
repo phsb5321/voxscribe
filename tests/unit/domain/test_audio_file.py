@@ -1,9 +1,10 @@
-import pytest
 from uuid import UUID
 
-from app.domain.entities.audio_file import AudioFile, MAX_FILE_SIZE_BYTES
-from app.domain.value_objects.audio_format import AudioFormat
+import pytest
+
+from app.domain.entities.audio_file import MAX_FILE_SIZE_BYTES, AudioFile
 from app.domain.exceptions import FileTooLargeError, InvalidAudioFormatError
+from app.domain.value_objects.audio_format import AudioFormat
 
 
 class TestAudioFileCreation:
@@ -40,9 +41,7 @@ class TestAudioFileCreation:
             )
 
     def test_raises_value_error_for_filename_with_forward_slash(self):
-        with pytest.raises(
-            ValueError, match="original_filename must not contain path separators"
-        ):
+        with pytest.raises(ValueError, match="original_filename must not contain path separators"):
             AudioFile(
                 original_filename="path/file.mp3",
                 format=AudioFormat.MP3,
@@ -51,9 +50,7 @@ class TestAudioFileCreation:
             )
 
     def test_raises_value_error_for_filename_with_backslash(self):
-        with pytest.raises(
-            ValueError, match="original_filename must not contain path separators"
-        ):
+        with pytest.raises(ValueError, match="original_filename must not contain path separators"):
             AudioFile(
                 original_filename="path\\file.mp3",
                 format=AudioFormat.MP3,
@@ -62,9 +59,7 @@ class TestAudioFileCreation:
             )
 
     def test_raises_value_error_for_filename_with_null_bytes(self):
-        with pytest.raises(
-            ValueError, match="original_filename must not contain null bytes"
-        ):
+        with pytest.raises(ValueError, match="original_filename must not contain null bytes"):
             AudioFile(
                 original_filename="file\x00.mp3",
                 format=AudioFormat.MP3,
