@@ -20,6 +20,7 @@ class AudioFile:
         default_factory=lambda: datetime.now(timezone.utc)
     )
     converted_path: str | None = None
+    source_url: str | None = None
 
     def __post_init__(self) -> None:
         self._validate()
@@ -35,8 +36,11 @@ class AudioFile:
             raise InvalidAudioFormatError(
                 f"Invalid format: {self.format}. Must be an AudioFormat enum value."
             )
-        if self.size_bytes <= 0:
-            raise ValueError("size_bytes must be positive")
+        # URL-sourced files are created as stubs with size_bytes=0 at submit time,
+        # then populated by the worker after download completes.
+        if self.source_url is None:
+            if self.size_bytes <= 0:
+                raise ValueError("size_bytes must be positive")
         if self.size_bytes > MAX_FILE_SIZE_BYTES:
             raise FileTooLargeError(
                 f"File size {self.size_bytes} exceeds maximum {MAX_FILE_SIZE_BYTES} bytes (500 MB)"

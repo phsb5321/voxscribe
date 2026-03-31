@@ -1,0 +1,155 @@
+# OpenAPI 3.1 Contract — Instagram Reel URL Transcription
+# Only new/modified endpoints are documented here.
+# Existing endpoints (POST /api/upload, GET /api/jobs, etc.) remain unchanged.
+
+openapi: "3.1.0"
+info:
+  title: Voxscribe API — Instagram Reel Extension
+  version: "0.3.0"
+  description: New endpoint for submitting Instagram reel URLs for transcription.
+
+paths:
+  /api/upload-url:
+    post:
+      summary: Submit an Instagram reel URL for transcription
+      description: |
+        Accepts an Instagram reel URL, validates the URL format, creates a transcription
+        job, and enqueues it for background processing. The worker downloads the reel audio,
+        converts it, and transcribes it using the configured engine.
+      operationId: uploadFromUrl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UrlUploadRequest"
+      responses:
+        "201":
+          description: Job created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResponse"
+        "400":
+          description: Invalid URL format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: URL is not a supported Instagram reel link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/jobs/{job_id}:
+    get:
+      summary: Get job status (extended with source_url)
+      description: |
+        Returns job status. For URL-sourced jobs, the response includes
+        source_url in the audio_file metadata.
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStatusResponse"
+
+components:
+  schemas:
+    UrlUploadRequest:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Instagram reel URL
+          examples:
+            - "https://www.instagram.com/reel/ABC123/"
+            - "https://www.instagram.com/reels/XYZ789/"
+        language:
+          type: string
+          default: "pt-BR"
+          description: Language for transcription
+          enum:
+            - "pt-BR"
+            - "en-US"
+            - "es-ES"
+
+    UploadResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: ["PENDING"]
+        redirect_url:
+          type: string
+          description: URL to the job status page
+
+    JobStatusResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: ["PENDING", "DOWNLOADING", "CONVERTING", "TRANSCRIBING", "COMPLETED", "FAILED"]
+        progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        language:
+          type: string
+        engine_name:
+          type: string
+        audio_file:
+          $ref: "#/components/schemas/AudioFileSchema"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        error_message:
+          type: string
+          nullable: true
+
+    AudioFileSchema:
+      type: object
+      properties:
+        original_filename:
+          type: string
+        format:
+          type: string
+        size_bytes:
+          type: integer
+        duration_seconds:
+          type: number
+          nullable: true
+        source_url:
+          type: string
+          format: uri
+          nullable: true
+          description: Instagram reel URL (null for file uploads)
+
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Human-readable error message

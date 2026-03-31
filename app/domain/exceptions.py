@@ -31,3 +31,11 @@ class StorageError(DomainError):
 
 class MaxRetriesExceededError(DomainError):
     """Raised when a job exceeds its maximum retry count."""
+
+
+class DownloadError(DomainError):
+    """Raised when downloading media from a URL fails."""
+
+
+class InvalidUrlError(DomainError):
+    """Raised when a submitted URL is not a valid or supported format."""

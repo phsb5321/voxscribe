@@ -14,6 +14,7 @@
     letter-spacing: 0.03em;
 }
 .status-PENDING { background: var(--amber-bg); color: var(--amber-text); }
+.status-DOWNLOADING { background: var(--blue-bg); color: var(--blue-text); }
 .status-CONVERTING { background: var(--blue-bg); color: var(--blue-text); }
 .status-TRANSCRIBING { background: var(--indigo-bg); color: var(--indigo-text); }
 .status-COMPLETED { background: var(--green-bg); color: var(--green-text); }
@@ -247,7 +248,8 @@
         </div>
         <div class="progress-info">
             <span class="progress-stage" id="progress-stage">
-                {% if job.status == 'CONVERTING' %}Converting audio...
+                {% if job.status == 'DOWNLOADING' %}Downloading reel audio...
+                {% elif job.status == 'CONVERTING' %}Converting audio...
                 {% elif job.status == 'TRANSCRIBING' %}Transcribing...
                 {% elif job.status == 'PENDING' %}Waiting in queue...
                 {% else %}Processing...{% endif %}
@@ -263,6 +265,10 @@
         <dt>Engine</dt>
         <dd>{{ job.engine_name or '—' }}</dd>
         {% if job.audio_file %}
+        {% if job.audio_file.source_url %}
+        <dt>Source</dt>
+        <dd><a href="{{ job.audio_file.source_url }}" target="_blank" rel="noopener" style="color:var(--navy-800);text-decoration:none;font-size:0.82rem;word-break:break-all;">{{ job.audio_file.source_url | truncate(50, True) }}</a></dd>
+        {% endif %}
         <dt>Format</dt>
         <dd>{{ job.audio_file.format }}</dd>
         <dt>Size</dt>
@@ -501,7 +507,8 @@ document.body.addEventListener('sse:status', function(evt) {
         if (fill) fill.style.width = data.progress_percent + '%';
         if (label) label.textContent = data.progress_percent + '%';
         if (stage) {
-            if (data.status === 'CONVERTING') stage.textContent = 'Converting audio...';
+            if (data.status === 'DOWNLOADING') stage.textContent = 'Downloading reel audio...';
+            else if (data.status === 'CONVERTING') stage.textContent = 'Converting audio...';
             else if (data.status === 'TRANSCRIBING') stage.textContent = 'Transcribing...';
             else if (data.status === 'PENDING') stage.textContent = 'Waiting in queue...';
             else stage.textContent = 'Processing...';

@@ -9,6 +9,7 @@ class AudioFileSchema(BaseModel):
     format: str
     size_bytes: int
     duration_seconds: float | None
+    source_url: str | None = None
 
 
 class UploadResponse(BaseModel):
@@ -40,6 +41,11 @@ class TranscriptionResultResponse(BaseModel):
 class ProgressEvent(BaseModel):
     status: str
     progress_percent: int
+
+
+class UrlUploadRequest(BaseModel):
+    url: str
+    language: str = "pt-BR"
 
 
 class HealthResponse(BaseModel):

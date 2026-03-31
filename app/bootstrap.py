@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 
 from app.adapters.outbound.converter.pydub_converter import PydubAudioConverter
+from app.adapters.outbound.downloader.ytdlp_downloader import YtDlpMediaDownloader
 from app.adapters.outbound.engines.faster_whisper_engine import FasterWhisperEngine
 from app.adapters.outbound.persistence.sqlite_repository import SQLiteJobRepository
 from app.adapters.outbound.queue.rq_queue import RQJobQueue
@@ -16,6 +17,7 @@ from app.ports.audio_converter import AudioConverterPort
 from app.ports.audio_storage import AudioStoragePort
 from app.ports.job_queue import JobQueuePort
 from app.ports.job_repository import JobRepositoryPort
+from app.ports.media_downloader import MediaDownloaderPort
 from app.ports.transcription_engine import TranscriptionEnginePort
 
 
@@ -29,6 +31,7 @@ class Container:
     converter: AudioConverterPort
     engine: TranscriptionEnginePort
     queue: JobQueuePort
+    downloader: MediaDownloaderPort
     submit_transcription: SubmitTranscriptionUseCase
     process_transcription: ProcessTranscriptionUseCase
     get_job_status: GetJobStatusUseCase
@@ -77,6 +80,7 @@ def bootstrap(settings: Settings | None = None) -> Container:
     converter = PydubAudioConverter()
     engine = _create_engine(settings)
     queue = RQJobQueue(redis_url=settings.redis_url)
+    downloader = YtDlpMediaDownloader(cookies_file=settings.instagram_cookies_file)
 
     # Use cases
     submit_transcription = SubmitTranscriptionUseCase(
@@ -91,6 +95,7 @@ def bootstrap(settings: Settings | None = None) -> Container:
         storage=storage,
         converter=converter,
         engine=engine,
+        downloader=downloader,
     )
 
     get_job_status = GetJobStatusUseCase(repository=repository)
@@ -102,6 +107,7 @@ def bootstrap(settings: Settings | None = None) -> Container:
         converter=converter,
         engine=engine,
         queue=queue,
+        downloader=downloader,
         submit_transcription=submit_transcription,
         process_transcription=process_transcription,
         get_job_status=get_job_status,

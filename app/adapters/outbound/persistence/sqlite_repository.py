@@ -68,6 +68,13 @@ class SQLiteJobRepository(JobRepositoryPort):
             self._conn.execute(_CREATE_AUDIO_FILES)
             self._conn.execute(_CREATE_TRANSCRIPTION_JOBS)
             self._conn.execute(_CREATE_TRANSCRIPTION_RESULTS)
+            # Add source_url column if not present (migration for existing DBs)
+            try:
+                self._conn.execute(
+                    "ALTER TABLE audio_files ADD COLUMN source_url TEXT"
+                )
+            except sqlite3.OperationalError:
+                pass  # Column already exists
 
     # ------------------------------------------------------------------
     # Write operations
@@ -103,8 +110,8 @@ class SQLiteJobRepository(JobRepositoryPort):
         sql = """
             INSERT OR REPLACE INTO audio_files
                 (id, original_filename, format, size_bytes, duration_seconds,
-                 storage_path, upload_timestamp, converted_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 storage_path, upload_timestamp, converted_path, source_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         with self._conn:
             self._conn.execute(
@@ -118,6 +125,7 @@ class SQLiteJobRepository(JobRepositoryPort):
                     audio_file.storage_path,
                     audio_file.upload_timestamp.isoformat(),
                     audio_file.converted_path,
+                    audio_file.source_url,
                 ),
             )
 
@@ -226,6 +234,7 @@ class SQLiteJobRepository(JobRepositoryPort):
             storage_path=row["storage_path"],
             upload_timestamp=datetime.fromisoformat(row["upload_timestamp"]),
             converted_path=row["converted_path"],
+            source_url=row["source_url"] if "source_url" in row.keys() else None,
         )
 
     @staticmethod

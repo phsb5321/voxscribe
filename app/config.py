@@ -39,6 +39,9 @@ class Settings:
             "GROQ_MODEL", "whisper-large-v3"
         )
     )
+    instagram_cookies_file: str | None = field(
+        default_factory=lambda: os.environ.get("INSTAGRAM_COOKIES_FILE")
+    )
 
     @property
     def sqlite_path(self) -> str:

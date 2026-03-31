@@ -3,7 +3,9 @@ import os
 import time
 from uuid import UUID
 
+from app.domain.entities.audio_file import MAX_FILE_SIZE_BYTES
 from app.domain.entities.transcription_result import TranscriptionResult
+from app.domain.exceptions import DownloadError, FileTooLargeError
 from app.domain.services.chunking_strategy import (
     add_overlap,
     compute_chunk_boundaries,
@@ -14,6 +16,7 @@ from app.domain.value_objects.job_status import JobStatus
 from app.ports.audio_converter import AudioConverterPort
 from app.ports.audio_storage import AudioStoragePort
 from app.ports.job_repository import JobRepositoryPort
+from app.ports.media_downloader import MediaDownloaderPort
 from app.ports.transcription_engine import TranscriptionEnginePort
 
 logger = logging.getLogger(__name__)
@@ -26,11 +29,13 @@ class ProcessTranscriptionUseCase:
         storage: AudioStoragePort,
         converter: AudioConverterPort,
         engine: TranscriptionEnginePort,
+        downloader: MediaDownloaderPort | None = None,
     ) -> None:
         self._repository = repository
         self._storage = storage
         self._converter = converter
         self._engine = engine
+        self._downloader = downloader
 
     def execute(self, job_id: UUID) -> None:
         start_time = time.time()
@@ -41,15 +46,70 @@ class ProcessTranscriptionUseCase:
             return
 
         try:
-            # PENDING → CONVERTING
-            job.transition_to(JobStatus.CONVERTING)
-            self._repository.save_job(job)
-            logger.info(f"Job {job_id}: PENDING → CONVERTING")
-
-            # Get the audio file and resolve absolute path
+            # Get the audio file
             audio_file = self._repository.get_audio_file(job.audio_file_id)
             if audio_file is None:
                 raise ValueError(f"Audio file {job.audio_file_id} not found")
+
+            # DOWNLOADING step for URL-sourced jobs
+            if audio_file.source_url is not None and (
+                not audio_file.storage_path
+                or not os.path.exists(
+                    self._storage.get_absolute_path(audio_file.storage_path)
+                    if audio_file.storage_path
+                    else ""
+                )
+            ):
+                if self._downloader is None:
+                    raise ValueError(
+                        "Media downloader not configured but job requires URL download"
+                    )
+
+                job.transition_to(JobStatus.DOWNLOADING)
+                self._repository.save_job(job)
+                logger.info(f"Job {job_id}: PENDING → DOWNLOADING")
+
+                result = self._downloader.download_audio(
+                    audio_file.source_url, self._storage.get_absolute_path("")
+                )
+
+                if result.size_bytes > MAX_FILE_SIZE_BYTES:
+                    # Clean up oversized download
+                    try:
+                        os.unlink(result.file_path)
+                    except OSError:
+                        pass
+                    raise FileTooLargeError(
+                        f"Downloaded file size {result.size_bytes} exceeds "
+                        f"maximum {MAX_FILE_SIZE_BYTES} bytes (500 MB)"
+                    )
+
+                # Store the downloaded file and update audio_file
+                with open(result.file_path, "rb") as f:
+                    file_data = f.read()
+                storage_path = self._storage.store(result.filename, file_data)
+
+                audio_file.storage_path = storage_path
+                audio_file.size_bytes = result.size_bytes
+                self._repository.create_audio_file(audio_file)
+
+                # Clean up temp download file
+                try:
+                    os.unlink(result.file_path)
+                except OSError:
+                    pass
+
+                # Re-read to get updated entity
+                audio_file = self._repository.get_audio_file(job.audio_file_id)
+                if audio_file is None:
+                    raise ValueError(f"Audio file {job.audio_file_id} not found after download")
+
+                logger.info(f"Job {job_id}: Downloaded {result.filename} ({result.size_bytes} bytes)")
+
+            # PENDING/DOWNLOADING → CONVERTING
+            job.transition_to(JobStatus.CONVERTING)
+            self._repository.save_job(job)
+            logger.info(f"Job {job_id}: → CONVERTING")
 
             absolute_input_path = self._storage.get_absolute_path(audio_file.storage_path)
 
