@@ -470,16 +470,70 @@
     vertical-align: middle;
     flex-shrink: 0;
 }
+.options-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--slate-500);
+    cursor: pointer;
+    margin-bottom: 0.75rem;
+    user-select: none;
+}
+.options-toggle:hover { color: var(--navy-700); }
+.options-toggle svg { transition: transform 0.2s; }
+.options-toggle.open svg { transform: rotate(90deg); }
+.options-panel { margin-bottom: 1.25rem; }
+.btn-cancel {
+    margin-top: 0.5rem;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.82rem;
+    background: var(--red-bg);
+    color: var(--red-text);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-weight: 600;
+}
+.btn-cancel:hover { background: #fecaca; }
+.hint-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    background: rgba(79,209,197,0.08);
+    border: 1px solid rgba(79,209,197,0.25);
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    color: var(--navy-700);
+    margin-bottom: 0.75rem;
+}
+.hint-dismiss {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: var(--slate-400);
+    cursor: pointer;
+    padding: 0 0.2rem;
+    line-height: 1;
+}
+.hint-dismiss:hover { color: var(--navy-700); }
 {% endblock %}
 
 {% block content %}
 <div class="card upload-card">
-    <div class="mode-tabs" id="mode-tabs">
-        <button type="button" class="mode-tab active" data-mode="file">
+    <div class="hint-banner" id="hint-banner" style="display:none;">
+        <span>You can also paste Instagram Reel URLs to transcribe video audio.</span>
+        <button type="button" class="hint-dismiss" id="hint-dismiss" aria-label="Dismiss hint">&times;</button>
+    </div>
+    <div class="mode-tabs" id="mode-tabs" role="tablist">
+        <button type="button" class="mode-tab active" data-mode="file" role="tab" aria-selected="true">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
             Upload File
         </button>
-        <button type="button" class="mode-tab" data-mode="url">
+        <button type="button" class="mode-tab" data-mode="url" role="tab" aria-selected="false">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
             Paste URL
         </button>
@@ -489,7 +543,7 @@
             <input type="text" id="url-input" placeholder="https://www.instagram.com/reel/..." autocomplete="off">
             <p class="url-hint">Paste an Instagram reel URL to transcribe its audio</p>
         </div>
-        <div class="drop-zone" id="drop-zone">
+        <div class="drop-zone" id="drop-zone" role="button" tabindex="0" aria-label="Upload audio file. Drag and drop or click to select.">
             <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="17 8 12 3 7 8"/>
@@ -501,9 +555,13 @@
             <input type="file" id="file-input" name="file" accept=".mp3,.wav,.flac,.ogg,.m4a" multiple hidden>
         </div>
 
-        <div class="file-list" id="file-list"></div>
+        <div class="file-list" id="file-list" aria-live="polite"></div>
 
-        <div class="form-row">
+        <div class="options-toggle" id="options-toggle" onclick="toggleOptions()">
+            <span>Options</span>
+            <svg id="options-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="form-row options-panel" id="options-panel" style="display:none;">
             <div class="form-group">
                 <label for="language">Language</label>
                 <select name="language" id="language">
@@ -522,6 +580,7 @@
         <div class="upload-progress" id="upload-progress">
             <div class="progress-track"><div class="progress-track-fill" id="progress-fill"></div></div>
             <p class="progress-info" id="progress-text">Uploading...</p>
+            <button type="button" class="btn-cancel" id="cancel-btn" style="display:none;" onclick="cancelUpload()">Cancel</button>
         </div>
 
         <div class="job-links" id="job-links" style="display:none"></div>
@@ -538,7 +597,7 @@
                 <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
-                <input type="text" id="search-input" placeholder="Search by filename...">
+                <input type="text" id="search-input" placeholder="Search by filename..." aria-label="Search transcriptions by filename">
             </div>
             <button type="button" class="btn-cleanup" id="cleanup-btn" title="Delete all transcriptions" style="display:none;">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -579,7 +638,7 @@
     var loadMoreBtn = document.getElementById('load-more-btn');
     var loadMoreWrap = document.getElementById('load-more-wrap');
     var MAX_SIZE = 500 * 1024 * 1024;
-    var ALLOWED = ['.mp3', '.wav', '.flac', '.ogg'];
+    var ALLOWED = ['.mp3', '.wav', '.flac', '.ogg', '.m4a'];
     var PAGE_SIZE = 50;
     var selectedFiles = [];
     var allJobs = [];
@@ -588,9 +647,20 @@
     var hasMore = false;
     var refreshTimer = null;
     var currentMode = 'file';
+    var activeXhr = null;
     var urlInput = document.getElementById('url-input');
     var urlInputWrap = document.getElementById('url-input-wrap');
     var modeTabs = document.getElementById('mode-tabs');
+
+    // Hint banner
+    var hintBanner = document.getElementById('hint-banner');
+    if (hintBanner && !localStorage.getItem('voxscribe-hint-dismissed')) {
+        hintBanner.style.display = '';
+    }
+    document.getElementById('hint-dismiss').addEventListener('click', function() {
+        hintBanner.style.display = 'none';
+        localStorage.setItem('voxscribe-hint-dismissed', '1');
+    });
 
     function formatSize(bytes) {
         if (bytes == null || bytes === 0) return '\u2014';
@@ -626,6 +696,35 @@
     }
 
     function clearError() { errorContainer.textContent = ''; }
+
+    window.trySample = function() {
+        fetch('/api/sample', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+            .then(function(r) { if (!r.ok) throw new Error('Sample unavailable'); return r.json(); })
+            .then(function(data) { window.location.href = data.redirect_url; })
+            .catch(function(err) { if (typeof showToast === 'function') showToast(err.message, 'error'); });
+    };
+
+    window.toggleOptions = function() {
+        var panel = document.getElementById('options-panel');
+        var toggle = document.getElementById('options-toggle');
+        var visible = panel.style.display !== 'none';
+        panel.style.display = visible ? 'none' : '';
+        toggle.classList.toggle('open', !visible);
+        sessionStorage.setItem('voxscribe-options-open', !visible ? '1' : '0');
+    };
+    // Restore options state
+    if (sessionStorage.getItem('voxscribe-options-open') === '1') {
+        document.getElementById('options-panel').style.display = '';
+        document.getElementById('options-toggle').classList.add('open');
+    }
+
+    window.cancelUpload = function() {
+        if (activeXhr) { activeXhr.abort(); activeXhr = null; }
+        document.getElementById('cancel-btn').style.display = 'none';
+        uploadProgress.classList.remove('visible');
+        submitBtn.disabled = false;
+        if (typeof showToast === 'function') showToast('Upload cancelled', 'info');
+    };
 
     /* ── Skeleton Loader ── */
     function showSkeleton() {
@@ -698,6 +797,9 @@
     }
 
     dropZone.addEventListener('click', function() { fileInput.click(); });
+    dropZone.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+    });
     fileInput.addEventListener('change', function() {
         if (fileInput.files.length) addFiles(fileInput.files);
         fileInput.value = '';
@@ -784,6 +886,8 @@
             data.append('language', language);
 
             var xhr = new XMLHttpRequest();
+            activeXhr = xhr;
+            document.getElementById('cancel-btn').style.display = '';
             xhr.open('POST', '/api/upload');
 
             xhr.upload.addEventListener('progress', function(e) {
@@ -803,7 +907,12 @@
                     uploadNext(index + 1);
                 } else {
                     var msg = 'Upload failed for ' + selectedFiles[index].name;
-                    try { msg = JSON.parse(xhr.responseText).detail || msg; } catch(e) {}
+                    try {
+                        var resp = JSON.parse(xhr.responseText);
+                        msg = resp.detail || msg;
+                    } catch(e) {}
+                    if (xhr.status === 413) msg = 'File too large. Maximum size is 500 MB.';
+                    if (xhr.status === 503) msg = 'The transcription service is temporarily unavailable. Please try again in a few minutes.';
                     showError(msg);
                     submitBtn.disabled = false;
                     uploadProgress.classList.remove('visible');
@@ -811,7 +920,7 @@
             };
 
             xhr.onerror = function() {
-                showError('Network error uploading ' + selectedFiles[index].name);
+                showError('Connection lost. Check your internet and try again.');
                 submitBtn.disabled = false;
                 uploadProgress.classList.remove('visible');
             };
@@ -865,9 +974,12 @@
         if (allJobs.length === 0) {
             container.innerHTML =
                 '<div class="empty-state">' +
-                '<svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>' +
-                '<p>No transcriptions yet</p>' +
-                '<p style="margin-top:0.35rem"><a href="#" onclick="document.getElementById(\'drop-zone\').click();return false;">Upload your first audio file</a> to get started</p>' +
+                '<svg class="empty-state-icon" viewBox="0 0 120 40" fill="none" stroke="currentColor" stroke-width="1.5" style="width:120px;height:40px;color:var(--slate-300);">' +
+                '<path d="M5 20 Q15 5 25 20 Q35 35 45 20 Q55 5 65 20 Q75 35 85 20 Q95 5 105 20 Q115 35 120 25" stroke-linecap="round"/>' +
+                '</svg>' +
+                '<p style="font-weight:600;color:var(--navy-700);margin-top:0.5rem;">No transcriptions yet</p>' +
+                '<p style="margin-top:0.35rem;font-size:0.85rem;max-width:320px;margin-left:auto;margin-right:auto;">Drop an audio file above or paste an Instagram URL to get started. Supports MP3, WAV, FLAC, OGG, M4A — up to 500 MB.</p>' +
+                '<button class="btn btn-primary" style="margin-top:1rem;font-size:0.85rem;" onclick="trySample()">Try with sample audio</button>' +
                 '</div>';
             return;
         }
@@ -1049,6 +1161,7 @@
         if (!tab) return;
         modeTabs.querySelectorAll('.mode-tab').forEach(function(t) { t.classList.remove('active'); });
         tab.classList.add('active');
+        modeTabs.querySelectorAll('.mode-tab').forEach(function(t) { t.setAttribute('aria-selected', t === tab ? 'true' : 'false'); });
         currentMode = tab.getAttribute('data-mode');
 
         if (currentMode === 'url') {
