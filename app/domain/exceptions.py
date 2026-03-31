@@ -14,9 +14,7 @@ class InvalidStateTransitionError(DomainError):
     """Raised when a job status transition is invalid."""
 
     def __init__(self, current_status: str, target_status: str):
-        super().__init__(
-            f"Invalid state transition: {current_status} → {target_status}"
-        )
+        super().__init__(f"Invalid state transition: {current_status} → {target_status}")
         self.current_status = current_status
         self.target_status = target_status
 

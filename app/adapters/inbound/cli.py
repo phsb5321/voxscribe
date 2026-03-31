@@ -25,13 +25,9 @@ def _find_audio_files(directory: str) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Transcribe audio files in a directory"
-    )
+    parser = argparse.ArgumentParser(description="Transcribe audio files in a directory")
     parser.add_argument("directory", help="Directory containing audio files")
-    parser.add_argument(
-        "--language", default="pt-BR", help="Language code (default: pt-BR)"
-    )
+    parser.add_argument("--language", default="pt-BR", help="Language code (default: pt-BR)")
     parser.add_argument(
         "--engine",
         default=None,

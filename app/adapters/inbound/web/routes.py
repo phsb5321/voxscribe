@@ -1,6 +1,7 @@
 """FastAPI routes for the web UI and API."""
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -77,12 +78,12 @@ async def upload_file(file: UploadFile, language: str = "pt-BR"):
         )
         response = container.submit_transcription.execute(request)
     except InvalidAudioFormatError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except FileTooLargeError as e:
-        raise HTTPException(status_code=413, detail=str(e))
+        raise HTTPException(status_code=413, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Upload failed: {e}")
-        raise HTTPException(status_code=503, detail="Service unavailable")
+        raise HTTPException(status_code=503, detail="Service unavailable") from e
 
     return UploadResponse(
         job_id=response.job_id,
@@ -102,12 +103,12 @@ async def upload_from_url(body: UrlUploadRequest):
         )
         response = container.submit_transcription.execute_from_url(request)
     except InvalidUrlError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) from e
     except DomainError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"URL upload failed: {e}")
-        raise HTTPException(status_code=503, detail="Service unavailable")
+        raise HTTPException(status_code=503, detail="Service unavailable") from e
 
     return UploadResponse(
         job_id=response.job_id,
@@ -151,15 +152,11 @@ async def delete_all_jobs():
     for job in jobs:
         audio = container.repository.get_audio_file(job.audio_file_id)
         if audio:
-            try:
+            with contextlib.suppress(Exception):
                 container.storage.delete(audio.storage_path)
-            except Exception:
-                pass
             if audio.converted_path:
-                try:
+                with contextlib.suppress(Exception):
                     container.storage.delete(audio.converted_path)
-                except Exception:
-                    pass
 
     count = container.repository.delete_all_jobs()
     logger.info(f"Deleted {count} transcription jobs and associated files")
@@ -180,9 +177,9 @@ async def retry_job(job_id: UUID):
         container.repository.save_job(job)
         container.queue.enqueue(job.id)
     except MaxRetriesExceededError:
-        raise HTTPException(status_code=409, detail="Maximum retries exceeded")
+        raise HTTPException(status_code=409, detail="Maximum retries exceeded") from None
     except InvalidStateTransitionError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
     logger.info(f"Retrying job {job_id} (attempt {job.retry_count}/3)")
     return {
@@ -227,9 +224,7 @@ async def get_result(job_id: UUID):
     container = get_container()
     result = container.get_job_status.get_result(job_id)
     if result is None:
-        raise HTTPException(
-            status_code=404, detail="Job not found or not yet completed"
-        )
+        raise HTTPException(status_code=404, detail="Job not found or not yet completed")
 
     return TranscriptionResultResponse(
         job_id=result.job_id,
@@ -245,9 +240,7 @@ async def download_result(job_id: UUID):
     container = get_container()
     result = container.get_job_status.get_result(job_id)
     if result is None:
-        raise HTTPException(
-            status_code=404, detail="Job not found or not yet completed"
-        )
+        raise HTTPException(status_code=404, detail="Job not found or not yet completed")
 
     job = container.get_job_status.execute(job_id)
     filename = "transcription.txt"
@@ -272,15 +265,13 @@ async def job_progress_sse(job_id: UUID):
         while True:
             job = container.get_job_status.execute(job_id)
             if job is None:
-                yield f'event: error\ndata: {{"error": "Job not found"}}\n\n'
+                yield 'event: error\ndata: {"error": "Job not found"}\n\n'
                 return
 
             if job.status != last_status or job.progress_percent != last_progress:
                 last_status = job.status
                 last_progress = job.progress_percent
-                data = json.dumps(
-                    {"status": job.status, "progress_percent": job.progress_percent}
-                )
+                data = json.dumps({"status": job.status, "progress_percent": job.progress_percent})
                 yield f"event: status\ndata: {data}\n\n"
 
             if job.status in ("COMPLETED", "FAILED"):
@@ -299,6 +290,12 @@ async def job_progress_sse(job_id: UUID):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.get("/health")
+async def health():
+    """Simple health check for Dokku zero-downtime deploys."""
+    return {"status": "ok", "service": "Voxscribe"}
 
 
 @router.get("/api/health", response_model=HealthResponse)

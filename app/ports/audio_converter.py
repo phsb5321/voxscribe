@@ -17,13 +17,9 @@ class AudioConverterPort(ABC):
         """Get audio file duration in seconds."""
 
     @abstractmethod
-    def detect_silence_boundaries(
-        self, audio_path: str, min_silence_ms: int = 500
-    ) -> list[tuple[int, int]]:
+    def detect_silence_boundaries(self, audio_path: str, min_silence_ms: int = 500) -> list[tuple[int, int]]:
         """Detect non-silent segments. Returns list of (start_ms, end_ms) tuples."""
 
     @abstractmethod
-    def split_at_boundaries(
-        self, audio_path: str, boundaries: list[tuple[int, int]]
-    ) -> list[str]:
+    def split_at_boundaries(self, audio_path: str, boundaries: list[tuple[int, int]]) -> list[str]:
         """Split audio at given boundaries. Returns list of chunk file paths."""

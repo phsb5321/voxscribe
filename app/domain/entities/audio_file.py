@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from app.domain.exceptions import FileTooLargeError, InvalidAudioFormatError
@@ -16,9 +16,7 @@ class AudioFile:
     storage_path: str
     id: UUID = field(default_factory=uuid4)
     duration_seconds: float | None = None
-    upload_timestamp: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    upload_timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     converted_path: str | None = None
     source_url: str | None = None
 
@@ -33,15 +31,10 @@ class AudioFile:
         if "\x00" in self.original_filename:
             raise ValueError("original_filename must not contain null bytes")
         if not isinstance(self.format, AudioFormat):
-            raise InvalidAudioFormatError(
-                f"Invalid format: {self.format}. Must be an AudioFormat enum value."
-            )
+            raise InvalidAudioFormatError(f"Invalid format: {self.format}. Must be an AudioFormat enum value.")
         # URL-sourced files are created as stubs with size_bytes=0 at submit time,
         # then populated by the worker after download completes.
-        if self.source_url is None:
-            if self.size_bytes <= 0:
-                raise ValueError("size_bytes must be positive")
+        if self.source_url is None and self.size_bytes <= 0:
+            raise ValueError("size_bytes must be positive")
         if self.size_bytes > MAX_FILE_SIZE_BYTES:
-            raise FileTooLargeError(
-                f"File size {self.size_bytes} exceeds maximum {MAX_FILE_SIZE_BYTES} bytes (500 MB)"
-            )
+            raise FileTooLargeError(f"File size {self.size_bytes} exceeds maximum {MAX_FILE_SIZE_BYTES} bytes (500 MB)")

@@ -1,6 +1,4 @@
 import logging
-import os
-from uuid import UUID
 
 from app.application.dto import (
     SubmitTranscriptionRequest,
@@ -72,9 +70,7 @@ class SubmitTranscriptionUseCase:
             redirect_url=f"/jobs/{job.id}",
         )
 
-    def execute_from_url(
-        self, request: SubmitUrlTranscriptionRequest
-    ) -> SubmitTranscriptionResponse:
+    def execute_from_url(self, request: SubmitUrlTranscriptionRequest) -> SubmitTranscriptionResponse:
         # Validate URL with specific messaging
         if not validate_instagram_reel_url(request.url):
             if is_instagram_url(request.url):
@@ -83,8 +79,7 @@ class SubmitTranscriptionUseCase:
                     "Only reel URLs are supported (e.g., instagram.com/reel/...)."
                 )
             raise InvalidUrlError(
-                "Invalid URL. Please provide a valid Instagram reel URL "
-                "(e.g., https://www.instagram.com/reel/ABC123/)."
+                "Invalid URL. Please provide a valid Instagram reel URL (e.g., https://www.instagram.com/reel/ABC123/)."
             )
 
         reel_id = extract_reel_id(request.url) or "unknown"

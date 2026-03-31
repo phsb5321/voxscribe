@@ -14,7 +14,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Constants
-SUPPORTED_AUDIO_FORMATS = (".mp3", ".wav", ".flac", ".ogg")
+SUPPORTED_AUDIO_FORMATS = (".mp3", ".wav", ".flac", ".ogg", ".m4a")
 OUTPUT_FORMAT = "wav"
 LANGUAGE = "pt-BR"
 MAX_RETRIES = 3

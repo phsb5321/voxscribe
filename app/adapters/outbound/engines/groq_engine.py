@@ -12,9 +12,7 @@ GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 
 class GroqEngine(TranscriptionEnginePort):
-    def __init__(
-        self, api_key: str = "", model: str = "whisper-large-v3"
-    ) -> None:
+    def __init__(self, api_key: str = "", model: str = "whisper-large-v3") -> None:
         self._api_key = api_key or os.environ.get("GROQ_API_KEY", "")
         self._model = model
         self._client = None
@@ -29,9 +27,7 @@ class GroqEngine(TranscriptionEnginePort):
                     base_url=GROQ_BASE_URL,
                 )
             except Exception as exc:
-                raise TranscriptionError(
-                    f"Failed to initialize Groq client: {exc}"
-                ) from exc
+                raise TranscriptionError(f"Failed to initialize Groq client: {exc}") from exc
         return self._client
 
     def transcribe(self, audio_path: str, language: str) -> str:
@@ -50,17 +46,13 @@ class GroqEngine(TranscriptionEnginePort):
                 )
 
             text = response.text.strip()
-            logger.info(
-                f"Groq transcription completed: {len(text)} chars from {audio_path}"
-            )
+            logger.info(f"Groq transcription completed: {len(text)} chars from {audio_path}")
             return text
 
         except TranscriptionError:
             raise
         except Exception as exc:
-            raise TranscriptionError(
-                f"Groq transcription failed for {audio_path}: {exc}"
-            ) from exc
+            raise TranscriptionError(f"Groq transcription failed for {audio_path}: {exc}") from exc
 
     @property
     def engine_name(self) -> str:
