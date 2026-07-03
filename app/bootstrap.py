@@ -48,7 +48,11 @@ def _create_engine(settings: Settings) -> TranscriptionEnginePort:
     elif engine_name == "openai":
         from app.adapters.outbound.engines.openai_engine import OpenAIEngine
 
-        return OpenAIEngine(api_key=settings.openai_api_key)
+        return OpenAIEngine(
+            api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
+            model=settings.openai_model,
+        )
     elif engine_name == "groq":
         from app.adapters.outbound.engines.groq_engine import GroqEngine
 
