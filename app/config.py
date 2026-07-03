@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 class Settings:
     transcription_engine: str = field(default_factory=lambda: os.environ.get("TRANSCRIPTION_ENGINE", "faster-whisper"))
     openai_api_key: str = field(default_factory=lambda: os.environ.get("OPENAI_API_KEY", ""))
+    openai_base_url: str = field(default_factory=lambda: os.environ.get("OPENAI_BASE_URL", ""))
+    openai_model: str = field(default_factory=lambda: os.environ.get("OPENAI_MODEL", "gpt-4o-mini-transcribe"))
     redis_url: str = field(default_factory=lambda: os.environ.get("REDIS_URL", "redis://localhost:6379"))
     data_dir: str = field(default_factory=lambda: os.environ.get("DATA_DIR", "./DATA"))
     database_url: str = field(
